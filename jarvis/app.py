@@ -128,7 +128,7 @@ class MainWindow(QMainWindow):
         row=QHBoxLayout()
         row.addWidget(self.button("CREATE ROUTINE",self.create_routine))
         row.addWidget(self.button("REFRESH ROUTINES",self.refresh_routines))
-        row.addWidget(self.button("OPEN TASK SCHEDULER",lambda:self.run_report("Task Scheduler",lambda:actions.open_target("taskschd.msc"))))
+        row.addWidget(self.button("OPEN TASK SCHEDULER",lambda:self.run_report("Task Scheduler",lambda:actions.open_target("task scheduler"))))
         layout.addLayout(row)
         self.routines=QTextEdit(); self.routines.setReadOnly(True); layout.addWidget(self.routines,1)
         warning=QLabel("Saved routines are disabled by default. JARVIS will not silently schedule or run actions in the background.")
