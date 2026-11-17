@@ -1,6 +1,7 @@
 """Intent router for JARVIS. Unknown text is never executed as a shell command."""
 from __future__ import annotations
 
+from pathlib import Path
 
 from jarvis import actions, system_monitor
 
@@ -76,4 +77,3 @@ def respond(message: str, confirm=None) -> str:
                 "Risky actions ask before proceeding.")
     return ("I don't have a mapped action for that request yet. I will not interpret arbitrary text "
             "as terminal commands. Type 'help' to see supported PC controls.")
-from pathlib import Path
