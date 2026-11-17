@@ -98,7 +98,6 @@ class DownloadMonitor:
             self._known = present
             self._initialized = True
             return []
-        self._known.update(present)
         for key in list(self._pending):
             if key not in present:
                 self._pending.pop(key, None)
