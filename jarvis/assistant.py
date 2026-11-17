@@ -9,7 +9,7 @@ from jarvis import actions, system_monitor, ai
 def respond(message: str, confirm=None) -> str:
     # When configured, the AI brain handles both conversation and multi-step
     # tool selection. Without a key, retain the original local command router.
-    if ai.has_api_key():
+    if ai.is_ready():
         return ai.respond(message, confirm=confirm)
 
     text = message.strip()
@@ -79,6 +79,6 @@ def respond(message: str, confirm=None) -> str:
         return ("Try: PC status; open Notepad; open C:\\\\path\\\\to\\\\file; list processes; "
                 "show startup apps; Defender status; start Defender scan; high performance; "
                 "close process 1234; restart PC; lock PC; find file report.pdf. "
-                "Add an OpenAI API key with AI SETUP to enable natural conversation and tool planning.")
-    return ("AI brain is not connected yet. Click AI SETUP to add an OpenAI API key; "
-            "then you can describe tasks naturally. Basic commands still work without it.")
+                "Install Ollama and select SET UP LOCAL AI to enable natural conversation and tool planning.")
+    return ("Local AI is not ready yet. Select SET UP LOCAL AI to install or download the local model. "
+            "Basic commands still work while setup completes.")
