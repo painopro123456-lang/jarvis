@@ -31,8 +31,11 @@ JARVIS uses [Ollama](https://ollama.com) to run its language model locally. Ther
 ### Security center
 - Read Microsoft Defender and Windows Firewall status.
 - Inspect visible network connections, process indicators and startup entries.
+- Read Defender's real-time protection, behavior monitoring, network inspection, tamper-protection and signature freshness status where Windows exposes them.
+- Read recent Microsoft Defender detection history without changing quarantine.
 - Ask Microsoft Defender to scan a selected file or run a quick scan.
-- JARVIS does not disable Defender or Windows Firewall. Process and network indicators are review leads, not proof of malware. Defender handles its own quarantine workflow.
+- Inspect a selected file's SHA-256 and Authenticode signer/status locally; files are not executed or uploaded by this check.
+- JARVIS does not disable Defender or Windows Firewall and does not claim to replace antivirus. Process/network indicators and signature results are evidence to review, not proof that a file or PC is clean. Defender handles its own quarantine workflow. These checks are defensive visibility features, not a guarantee against advanced malware.
 
 ### Browser access roadmap
 - Browser automation is planned as a permissioned feature. The current build can open the default browser, but does not yet have full tab/page interaction. Future browser actions will use a visible, user-controlled browser session and ask before submitting forms, downloading files, sending messages or purchasing anything.
