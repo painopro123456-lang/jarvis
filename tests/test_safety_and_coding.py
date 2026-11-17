@@ -110,6 +110,22 @@ class ProcessAndLaunchSafetyTests(unittest.TestCase):
             self.assertIn("Opening", result)
             startfile.assert_called_once()
 
+    def test_mmc_snapins_launch_through_mmc_exe(self):
+        with patch("jarvis.actions.subprocess.Popen") as popen:
+            result = actions.open_target("task scheduler")
+        self.assertIn("Opening", result)
+        popen.assert_called_once_with(["mmc.exe", "taskschd.msc"], shell=False)
+
+    def test_path_executable_also_requires_approval(self):
+        with tempfile.TemporaryDirectory() as folder:
+            executable = Path(folder) / "tool.exe"
+            executable.write_bytes(b"placeholder")
+            with patch("jarvis.actions.shutil.which", return_value=str(executable)), \
+                 patch("jarvis.actions.subprocess.Popen") as popen:
+                result = actions.open_target("tool", confirm=lambda prompt: False)
+            self.assertIn("cancelled", result.lower())
+            popen.assert_not_called()
+
     def test_critical_windows_process_cannot_be_terminated(self):
         class FakeProcess:
             def name(self):
