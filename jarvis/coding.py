@@ -203,6 +203,95 @@ def search_project(project: str, query: str) -> str:
         summary += f"; skipped {skipped_large} files over {MAX_READ_BYTES} bytes"
     return summary + ".\n" + ("\n".join(matches) if matches else "No matches found.")
 
+
+def audit_python_project(project: str) -> str:
+    """Run bounded, read-only AST and heuristic security checks on Python source."""
+    import ast
+    import re
+
+    base = _project_path(project)
+    findings: list[tuple[str, str, str, str]] = []
+    scanned = 0
+    syntax_errors = 0
+    secret_pattern = re.compile(
+        r"(?i)\\b(api[_-]?key|secret|password|token)\\b\\s*[:=]\\s*['\"]([^'\"]{12,})['\"]"
+    )
+    dangerous_calls = {
+        "eval": ("HIGH", "Dynamic eval() executes data as Python code."),
+        "exec": ("HIGH", "exec() executes dynamically supplied code."),
+        "os.system": ("MEDIUM", "os.system() invokes a system shell; prefer argument-list subprocess calls."),
+        "pickle.load": ("HIGH", "Untrusted pickle data can execute code during deserialization."),
+        "pickle.loads": ("HIGH", "Untrusted pickle data can execute code during deserialization."),
+    }
+    for current, dirs, files in os.walk(base):
+        dirs[:] = sorted(d for d in dirs if d not in IGNORED_DIRS and d.casefold() not in BLOCKED_DIRS
+                         and not (Path(current) / d).is_symlink())
+        for name in sorted(files):
+            candidate = Path(current) / name
+            if candidate.suffix.casefold() != ".py" or candidate.is_symlink():
+                continue
+            relative = candidate.relative_to(base).as_posix()
+            try:
+                safe_path = _file_path(project, relative)
+                if not safe_path.is_file() or safe_path.stat().st_size > MAX_READ_BYTES:
+                    continue
+                source = safe_path.read_text(encoding="utf-8")
+            except (OSError, UnicodeError, ValueError):
+                continue
+            scanned += 1
+            try:
+                tree = ast.parse(source, filename=relative)
+            except SyntaxError as exc:
+                syntax_errors += 1
+                findings.append(("ERROR", relative, str(exc.lineno or 1), "Python syntax error; source was not executed."))
+                continue
+
+            for line_no, line in enumerate(source.splitlines(), 1):
+                if secret_pattern.search(line):
+                    findings.append(("HIGH", relative, str(line_no),
+                                     "Possible hard-coded credential; value deliberately not displayed."))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                parts = []
+                current_node = node.func
+                while isinstance(current_node, ast.Attribute):
+                    parts.append(current_node.attr)
+                    current_node = current_node.value
+                if isinstance(current_node, ast.Name):
+                    parts.append(current_node.id)
+                call_name = ".".join(reversed(parts))
+                if call_name in dangerous_calls:
+                    severity, message = dangerous_calls[call_name]
+                    findings.append((severity, relative, str(getattr(node, "lineno", 1)), message))
+                if call_name in {"subprocess.run", "subprocess.Popen", "subprocess.call"}:
+                    if any(keyword.arg == "shell" and isinstance(keyword.value, ast.Constant)
+                           and keyword.value.value is True for keyword in node.keywords):
+                        findings.append(("HIGH", relative, str(getattr(node, "lineno", 1)),
+                                         "subprocess is invoked with shell=True; review for command injection."))
+                if call_name == "yaml.load":
+                    safe_loader = any(keyword.arg == "Loader" for keyword in node.keywords)
+                    if not safe_loader:
+                        findings.append(("HIGH", relative, str(getattr(node, "lineno", 1)),
+                                         "yaml.load() has no explicit safe Loader; use yaml.safe_load()."))
+            if len(findings) >= 120:
+                break
+        if len(findings) >= 120:
+            break
+
+    if not findings:
+        return (f"Python static audit complete: scanned {scanned} files; no configured checks triggered. "
+                "This is not proof the project is secure; no code was executed.")
+    order = {"ERROR": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+    findings.sort(key=lambda item: (order.get(item[0], 9), item[1], int(item[2]) if item[2].isdigit() else 0))
+    lines = [f"Python static audit: scanned {scanned} files; {syntax_errors} syntax errors; "
+             f"{len(findings)} findings (capped at 120)."]
+    lines.extend(f"[{severity}] {path}:{line} — {message}"
+                 for severity, path, line, message in findings[:120])
+    lines.append("Read-only heuristic audit: findings need human review; absence of findings is not a security guarantee.")
+    return "\\n".join(lines)
+
+
 COMMANDS = {
     "python_tests": ([sys.executable, "-m", "pytest", "-q"], "Run Python test suite"),
     "python_compile": ([sys.executable, "-m", "compileall", "-q", "-x", r"(^|[\\/])(\.git|\.venv|venv|node_modules|target|dist|build|\.jarvis-backups)([\\/]|$)", "."], "Compile-check Python files"),
