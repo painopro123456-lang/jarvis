@@ -11,6 +11,10 @@ on:
       - 'build.bat'
       - '.github/workflows/build-windows.yml'
 
+concurrency:
+  group: jarvis-windows-release
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
