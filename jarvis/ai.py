@@ -11,12 +11,6 @@ import urllib.request
 from typing import Callable
 
 OLLAMA_URL = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
-MODEL = os.getenv("JARVIS_LOCAL_MODEL") or _choose_model()
-_HISTORY: list[dict] = []
-_SERVER_PROCESS = None
-_PULL_PROCESS = None
-
-
 def _choose_model() -> str:
     """Choose a modest local model based on installed physical RAM."""
     try:
@@ -26,6 +20,12 @@ def _choose_model() -> str:
         ram = 8
     # Small enough for older laptops; users with more RAM get a stronger model.
     return "qwen3.5:4b" if ram >= 16 else ("qwen3.5:2b" if ram >= 8 else "qwen3.5:0.8b")
+
+
+MODEL = os.getenv("JARVIS_LOCAL_MODEL") or _choose_model()
+_HISTORY: list[dict] = []
+_SERVER_PROCESS = None
+_PULL_PROCESS = None
 
 
 def ollama_installed() -> bool:
