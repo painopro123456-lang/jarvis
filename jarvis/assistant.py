@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from jarvis import actions, system_monitor, ai
+from jarvis import actions, system_monitor, ai, security, memory, automation
 
 
 def respond(message: str, confirm=None) -> str:
@@ -34,6 +34,33 @@ def respond(message: str, confirm=None) -> str:
         return actions.startup_report()
     if any(w in lower for w in ("processes", "running apps", "task list", "ram usage")):
         return actions.process_report()
+    if "firewall" in lower:
+        return security.firewall_status()
+    if "network connections" in lower or "active connections" in lower:
+        return security.network_connections()
+    if "suspicious process" in lower or "process security" in lower:
+        return security.inspect_processes()
+    if lower.startswith("scan file "):
+        path = text[10:].strip()
+        if confirm and not confirm(f"Ask Microsoft Defender to scan {path}?"):
+            return "File scan cancelled."
+        return security.scan_file(path)
+    if "restore point" in lower:
+        if confirm and not confirm("Create a Windows restore point? Administrator mode is required."):
+            return "Restore point cancelled."
+        return security.create_restore_point()
+    if lower.startswith("remember "):
+        return memory.remember(text[9:].strip())
+    if "what do you remember" in lower or lower == "show memory":
+        return memory.summary()
+    if "clear memory" in lower:
+        if confirm and not confirm("Clear all locally saved JARVIS memories?"):
+            return "Memory clear cancelled."
+        return memory.clear()
+    if lower.startswith("create routine "):
+        return automation.add_routine("Custom routine", text[15:].strip())
+    if "list routines" in lower or "show routines" in lower:
+        return automation.report()
     if lower.startswith(("close process ", "end process ", "kill process ")):
         pid = text.rsplit(" ", 1)[-1]
         if confirm and not confirm(f"Terminate process PID {pid}? Unsaved work in that app may be lost."):
@@ -77,7 +104,7 @@ def respond(message: str, confirm=None) -> str:
         return "Found files:\\n" + "\\n".join(matches) if matches else "No matching files found in Desktop, Documents, or Downloads."
     if lower in {"help", "what can you do", "commands"}:
         return ("Try: PC status; open Notepad; open C:\\\\path\\\\to\\\\file; list processes; "
-                "show startup apps; Defender status; start Defender scan; high performance; "
+                "show startup apps; Defender status; firewall status; active network connections; scan file C:\\\\path\\\\file.exe; remember I prefer dark mode; show memory; list routines; high performance; "
                 "close process 1234; restart PC; lock PC; find file report.pdf. "
                 "Install Ollama and select SET UP LOCAL AI to enable natural conversation and tool planning.")
     return ("Local AI is not ready yet. Select SET UP LOCAL AI to install or download the local model. "
