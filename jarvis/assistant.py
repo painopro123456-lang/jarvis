@@ -27,7 +27,7 @@ def respond(message: str, confirm=None) -> str:
     if any(w in lower for w in ("defender status", "antivirus status", "protection status")):
         return actions.defender_status()
     if "defender" in lower or "virus scan" in lower or "malware scan" in lower or "security scan" in lower:
-        if confirm and not confirm("Start a Microsoft Defender quick scan?"):
+        if not confirm or not confirm("Start a Microsoft Defender quick scan?"):
             return "Scan cancelled."
         return actions.start_defender_quick_scan()
     if "startup" in lower and any(w in lower for w in ("list", "show", "what", "apps", "programs")):
@@ -42,11 +42,11 @@ def respond(message: str, confirm=None) -> str:
         return security.inspect_processes()
     if lower.startswith("scan file "):
         path = text[10:].strip()
-        if confirm and not confirm(f"Ask Microsoft Defender to scan {path}?"):
+        if not confirm or not confirm(f"Ask Microsoft Defender to scan {path}?"):
             return "File scan cancelled."
         return security.scan_file(path)
     if "restore point" in lower:
-        if confirm and not confirm("Create a Windows restore point? Administrator mode is required."):
+        if not confirm or not confirm("Create a Windows restore point? Administrator mode is required."):
             return "Restore point cancelled."
         return security.create_restore_point()
     if lower.startswith("remember "):
@@ -54,7 +54,7 @@ def respond(message: str, confirm=None) -> str:
     if "what do you remember" in lower or lower == "show memory":
         return memory.summary()
     if "clear memory" in lower:
-        if confirm and not confirm("Clear all locally saved JARVIS memories?"):
+        if not confirm or not confirm("Clear all locally saved JARVIS memories?"):
             return "Memory clear cancelled."
         return memory.clear()
     if lower.startswith("create routine "):
@@ -63,25 +63,25 @@ def respond(message: str, confirm=None) -> str:
         return automation.report()
     if lower.startswith(("close process ", "end process ", "kill process ")):
         pid = text.rsplit(" ", 1)[-1]
-        if confirm and not confirm(f"Terminate process PID {pid}? Unsaved work in that app may be lost."):
+        if not confirm or not confirm(f"Terminate process PID {pid}? Unsaved work in that app may be lost."):
             return "Process termination cancelled."
         return actions.terminate_process(pid)
     for phrase, plan in (("ultimate performance", "ultimate performance"),
                          ("high performance", "high performance"),
                          ("balanced power", "balanced")):
         if phrase in lower:
-            if confirm and not confirm(f"Change Windows power plan to {plan}?"):
+            if not confirm or not confirm(f"Change Windows power plan to {plan}?"):
                 return "Power plan change cancelled."
             return actions.set_power_plan(plan)
     if "cancel shutdown" in lower or "abort restart" in lower:
         return actions.cancel_power_action()
     if "restart" in lower or "shut down" in lower or "shutdown" in lower:
         kind = "restart" if "restart" in lower else "shutdown"
-        if confirm and not confirm(f"Schedule Windows {kind} in 60 seconds?"):
+        if not confirm or not confirm(f"Schedule Windows {kind} in 60 seconds?"):
             return f"{kind.title()} cancelled."
         return actions.schedule_power_action(kind)
     if "lock pc" in lower or "lock computer" in lower or lower == "lock windows":
-        if confirm and not confirm("Lock this Windows PC now?"):
+        if not confirm or not confirm("Lock this Windows PC now?"):
             return "Lock cancelled."
         return actions.lock_pc()
     if lower.startswith("open "):
