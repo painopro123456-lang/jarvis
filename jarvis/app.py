@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import webbrowser
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
@@ -70,7 +71,7 @@ class MainWindow(QMainWindow):
         self.chat = QTextEdit()
         self.chat.setReadOnly(True)
         self.chat.setPlaceholderText("Your JARVIS conversation will appear here.")
-        self.chat.append("JARVIS  /  Online. Configure AI SETUP for natural conversation and multi-step PC tasks. Basic commands work without an API key.")
+        self.chat.append("JARVIS  /  Online. Set up LOCAL AI for natural conversation, independent reasoning and multi-step PC tasks. No API key or cloud account required.")
         self.chat.setMinimumHeight(300)
         mid.addWidget(self.chat, 3)
         side = QFrame()
@@ -109,7 +110,7 @@ class MainWindow(QMainWindow):
         controls.addWidget(send)
         outer.addLayout(controls)
 
-        foot = QLabel("LOCAL PC CONTROL  •  UAC ELEVATION  •  CONFIRMATIONS FOR RISKY ACTIONS")
+        foot = QLabel("LOCAL AI  •  LOCAL PC CONTROL  •  UAC ELEVATION  •  CONFIRMATIONS FOR RISKY ACTIONS")
         foot.setObjectName("muted")
         outer.addWidget(foot)
 
@@ -130,31 +131,30 @@ class MainWindow(QMainWindow):
         """)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
+        self.timer.timeout.connect(self.update_ai_status)
         self.timer.start(2500)
         self.refresh()
         self.update_admin_status()
         self.update_ai_status()
 
     def update_ai_status(self):
-        self.ai_setup.setText("AI CONNECTED" if ai.has_api_key() else "AI SETUP")
+        self.ai_setup.setText("LOCAL AI READY" if ai.is_ready() else "SET UP LOCAL AI")
 
     def configure_ai(self):
-        key, accepted = QInputDialog.getText(
-            self, "Connect JARVIS AI",
-            "Paste your OpenAI API key. It is saved in Windows Credential Manager, not in the GitHub repository.",
-            QLineEdit.Password
-        )
-        if not accepted or not key.strip():
+        if not ai.ollama_installed():
+            QMessageBox.information(
+                self, "Install local AI",
+                "JARVIS does not need an API key. First install the free Ollama local runtime. "
+                "After installation, reopen JARVIS and click SET UP LOCAL AI to download its model."
+            )
+            webbrowser.open("https://ollama.com/download/windows")
             return
         try:
-            ai.save_api_key(key)
+            status = ai.start_model_download()
             self.update_ai_status()
-            QMessageBox.information(
-                self, "JARVIS AI connected",
-                "The API key was saved securely. JARVIS can now understand natural-language requests and choose from its approved PC tools. API usage is billed separately by OpenAI."
-            )
+            QMessageBox.information(self, "JARVIS local AI", status)
         except Exception as exc:
-            QMessageBox.warning(self, "Could not save API key", str(exc))
+            QMessageBox.warning(self, "Local AI setup", str(exc))
 
     def confirm(self, prompt: str) -> bool:
         return QMessageBox.question(self, "JARVIS confirmation", prompt,
