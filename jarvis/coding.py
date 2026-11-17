@@ -166,6 +166,43 @@ def preview_file_change(project: str, relative_path: str, content: str) -> str:
         return f"No changes proposed for {relative_path}."
     return f"Proposed change for {relative_path} (preview only; nothing written):\n{diff[:18000]}"
 
+def search_project(project: str, query: str) -> str:
+    """Search bounded UTF-8 project text for a symbol or phrase without executing code."""
+    needle = str(query).strip()
+    if not needle or len(needle) > 120:
+        raise ValueError("Enter a search phrase between 1 and 120 characters.")
+    base = _project_path(project)
+    matches = []
+    scanned = 0
+    skipped_large = 0
+    for current, dirs, files in os.walk(base):
+        dirs[:] = sorted(d for d in dirs if d not in IGNORED_DIRS and d.casefold() not in BLOCKED_DIRS and not (Path(current) / d).is_symlink())
+        for name in sorted(files):
+            candidate = Path(current) / name
+            if candidate.is_symlink():
+                continue
+            relative = candidate.relative_to(base).as_posix()
+            try:
+                safe_path = _file_path(project, relative)
+                if not safe_path.is_file():
+                    continue
+                if safe_path.stat().st_size > MAX_READ_BYTES:
+                    skipped_large += 1
+                    continue
+                content = safe_path.read_text(encoding="utf-8")
+            except (OSError, UnicodeError, ValueError):
+                continue
+            scanned += 1
+            for line_no, line in enumerate(content.splitlines(), 1):
+                if needle.casefold() in line.casefold():
+                    matches.append(f"{relative}:{line_no}: {line.strip()[:240]}")
+                    if len(matches) >= 80:
+                        return f"Project search for {needle!r} (first 80 matches; results capped):\n" + "\n".join(matches)
+    summary = f"Project search for {needle!r}: scanned {scanned} text files"
+    if skipped_large:
+        summary += f"; skipped {skipped_large} files over {MAX_READ_BYTES} bytes"
+    return summary + ".\n" + ("\n".join(matches) if matches else "No matches found.")
+
 COMMANDS = {
     "python_tests": ([sys.executable, "-m", "pytest", "-q"], "Run Python test suite"),
     "python_compile": ([sys.executable, "-m", "compileall", "-q", "-x", r"(^|[\\/])(\.git|\.venv|venv|node_modules|target|dist|build|\.jarvis-backups)([\\/]|$)", "."], "Compile-check Python files"),
