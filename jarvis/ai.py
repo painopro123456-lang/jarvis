@@ -171,6 +171,8 @@ TOOLS = [
     _tool("clear_memory", "Clear all local JARVIS memory. Requires confirmation."),
     _tool("save_automation_routine", "Save a disabled automation routine for the user to review.", {"name": {"type": "string"}, "instruction": {"type": "string"}}, ["name", "instruction"]),
     _tool("list_automation_routines", "List saved automation routines."),
+    _tool("install_approved_app", "Install an app from JARVIS's small allow-list using Windows Package Manager.", {"app": {"type": "string", "enum": ["7zip","vlc","notepad++","firefox","google chrome","obs","discord","steam"]}}, ["app"]),
+    _tool("upgrade_approved_app", "Update an app from JARVIS's small allow-list using Windows Package Manager.", {"app": {"type": "string", "enum": ["7zip","vlc","notepad++","firefox","google chrome","obs","discord","steam"]}}, ["app"]),
 ]
 
 
@@ -244,6 +246,16 @@ def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> st
         return automation.add_routine(str(args["name"]), str(args["instruction"]))
     if name == "list_automation_routines":
         return automation.report()
+    if name == "install_approved_app":
+        app=str(args["app"]).lower()
+        if confirm and not confirm(f"Install {app} using Windows Package Manager?"):
+            return "Installation cancelled."
+        return actions.install_approved_app(app, upgrade=False)
+    if name == "upgrade_approved_app":
+        app=str(args["app"]).lower()
+        if confirm and not confirm(f"Update {app} using Windows Package Manager?"):
+            return "Update cancelled."
+        return actions.install_approved_app(app, upgrade=True)
     return "Tool not available."
 
 
