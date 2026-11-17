@@ -85,7 +85,7 @@ def respond(message: str, confirm=None) -> str:
             return "Lock cancelled."
         return actions.lock_pc()
     if lower.startswith("open "):
-        return actions.open_target(text[5:])
+        return actions.open_target(text[5:], confirm=confirm)
     if lower.startswith("find file "):
         term = text[10:].strip().lower()
         if not term:
