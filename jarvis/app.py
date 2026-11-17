@@ -1,7 +1,7 @@
 from __future__ import annotations
-import sys, webbrowser, queue
+import sys, webbrowser, queue, threading
 from pathlib import Path
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, QThread, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
@@ -12,6 +12,28 @@ from jarvis.assistant import respond
 from jarvis.system_monitor import snapshot, recommendations
 from jarvis.voice import Voice
 from jarvis import actions, ai, security, memory, automation, vision, native_core, activity, download_guard
+
+class AssistantWorker(QThread):
+    answer = Signal(str)
+    confirmation_requested = Signal(object)
+
+    def __init__(self, message: str):
+        super().__init__()
+        self.message = message
+
+    def _confirm(self, prompt: str) -> bool:
+        request = {"prompt": prompt, "event": threading.Event(), "approved": False}
+        self.confirmation_requested.emit(request)
+        if not request["event"].wait(timeout=600):
+            return False
+        return bool(request["approved"])
+
+    def run(self):
+        try:
+            self.answer.emit(respond(self.message, confirm=self._confirm))
+        except Exception as exc:
+            self.answer.emit(f"I couldn't complete that request: {exc}")
+
 
 class Metric(QFrame):
     def __init__(self,title):
@@ -230,10 +252,33 @@ class MainWindow(QMainWindow):
     def send(self):
         message=self.entry.text().strip()
         if not message: return
-        self.entry.clear(); self.chat.append(f"YOU / {message}")
-        try: answer=respond(message,confirm=self.confirm)
-        except Exception as exc: answer=f"I couldn't complete that action: {exc}"
-        self.chat.append(f"JARVIS / {answer}\n"); self.voice.speak(answer,self.voice_style.currentText())
+        current=getattr(self,"_assistant_worker",None)
+        if current is not None and current.isRunning():
+            self.chat.append("JARVIS / I'm still working on the previous request. One at a time keeps actions in order.")
+            return
+        self.entry.clear()
+        self.chat.append(f"YOU / {message}")
+        worker=AssistantWorker(message)
+        worker.confirmation_requested.connect(self._handle_worker_confirmation)
+        worker.answer.connect(self._assistant_result)
+        worker.finished.connect(self._assistant_finished)
+        self._assistant_worker=worker
+        self.entry.setEnabled(False)
+        worker.start()
+
+    def _handle_worker_confirmation(self, request):
+        approved=self.confirm(request["prompt"])
+        request["approved"]=approved
+        request["event"].set()
+
+    def _assistant_result(self, answer):
+        self.chat.append(f"JARVIS / {answer}\n")
+        self.voice.speak(answer,self.voice_style.currentText())
+
+    def _assistant_finished(self):
+        self.entry.setEnabled(True)
+        self.entry.setFocus()
+        self._assistant_worker=None
     def listen(self):
         self.chat.append("JARVIS / Listening…"); QApplication.processEvents()
         try: self.entry.setText(self.voice.listen_once()); self.send()
@@ -290,6 +335,11 @@ class MainWindow(QMainWindow):
             self.settings_log.append(f"Screen analysis ({path.name}):\\n{result}")
         except Exception as exc: QMessageBox.warning(self,"Screen vision",str(exc))
     def closeEvent(self,event):
+        worker=getattr(self,"_assistant_worker",None)
+        if worker is not None and worker.isRunning():
+            event.ignore()
+            self.chat.append("JARVIS / I'm still completing the current task. Close the window again after I finish.")
+            return
         self.voice.stop_wake_word(); self.voice.stop_speaking(); super().closeEvent(event)
 
 def main():
