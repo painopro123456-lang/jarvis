@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 from jarvis.assistant import respond
 from jarvis.system_monitor import snapshot, recommendations
 from jarvis.voice import Voice
-from jarvis import actions, ai, security, memory, automation, vision
+from jarvis import actions, ai, security, memory, automation, vision, native_core
 
 class Metric(QFrame):
     def __init__(self,title):
@@ -113,7 +113,7 @@ class MainWindow(QMainWindow):
         row2=QHBoxLayout()
         row2.addWidget(self.button("FIND DUPLICATE FILES",self.find_duplicates))
         row2.addWidget(self.button("SCAN A FILE",self.scan_file))
-        row2.addWidget(self.button("STARTUP APPS",lambda:self.run_report("Startup apps",actions.startup_report)))
+        row2.addWidget(self.button("STARTUP APPS",lambda:self.run_report("Startup apps",actions.startup_report)))\n        row2.addWidget(self.button("RUST DRIVER AUDIT",lambda:self.run_report("Driver audit",native_core.driver_audit)))
         layout.addLayout(row2)
         self.security_log=QTextEdit(); self.security_log.setReadOnly(True)
         self.security_log.setPlaceholderText("Security inspection results appear here. Review indicators carefully; they are not automatic malware verdicts.")
