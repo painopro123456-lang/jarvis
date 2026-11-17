@@ -174,11 +174,12 @@ TOOLS = [
     _tool("install_approved_app", "Install an app from JARVIS's small allow-list using Windows Package Manager.", {"app": {"type": "string", "enum": ["7zip","vlc","notepad++","firefox","google chrome","obs","discord","steam"]}}, ["app"]),
     _tool("upgrade_approved_app", "Update an app from JARVIS's small allow-list using Windows Package Manager.", {"app": {"type": "string", "enum": ["7zip","vlc","notepad++","firefox","google chrome","obs","discord","steam"]}}, ["app"]),
     _tool("run_pc_diagnostics", "Collect read-only system, disk and recent Windows error diagnostics."),
+    _tool("find_duplicate_files", "Find duplicate files in Desktop, Documents and Downloads without deleting anything."),
 ]
 
 
 def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> str:
-    from jarvis import actions, system_monitor, security, memory, automation, diagnostics
+    from jarvis import actions, system_monitor, security, memory, automation, diagnostics, file_tools
     if name == "get_system_status":
         d = system_monitor.snapshot()
         return json.dumps({k: d[k] for k in (
@@ -258,6 +259,8 @@ def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> st
             return "Update cancelled."
         return actions.install_approved_app(app, upgrade=True)
     if name == "run_pc_diagnostics":
+    if name == "find_duplicate_files":
+        return file_tools.find_duplicates()
         return diagnostics.report()
     return "Tool not available."
 
