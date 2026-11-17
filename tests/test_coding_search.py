@@ -25,7 +25,7 @@ class ProjectSearchTests(unittest.TestCase):
 
     def test_finds_case_insensitive_symbol_with_line_number(self):
         (self.project / "src").mkdir()
-        (self.project / "src" / "main.py").write_text("def Target_Symbol():\\n    return 7\\n", encoding="utf-8")
+        (self.project / "src" / "main.py").write_text("def Target_Symbol():\n    return 7\n", encoding="utf-8")
         result = coding.search_project("demo", "target_symbol")
         self.assertIn("src/main.py:1", result)
         self.assertIn("def Target_Symbol()", result)
