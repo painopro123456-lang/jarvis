@@ -57,16 +57,16 @@ class DownloadMonitor:
     """
     def __init__(self):
         self.folder = Path.home() / "Downloads"
-        self._known: set[str] = set()
-        self._pending: dict[str, tuple[int, int]] = {}
-        self._reported: set[str] = set()
+        self._known: dict[str, tuple[int, int]] = {}
+        self._pending: dict[str, tuple[int, int, int]] = {}
+        self._reported: dict[str, tuple[int, int]] = {}
         self._initialized = False
 
     def poll(self) -> list[str]:
         if platform.system() != "Windows" or not self.folder.is_dir():
             return []
         found: list[str] = []
-        present: set[str] = set()
+        present: dict[str, tuple[int, int]] = {}
         try:
             entries = list(self.folder.iterdir())
         except OSError:
@@ -77,20 +77,25 @@ class DownloadMonitor:
                     continue
                 stat = path.stat()
                 key = str(path.resolve()).casefold()
-                present.add(key)
-                if not self._initialized or key in self._known or key in self._reported:
+                signature = (stat.st_size, stat.st_mtime_ns)
+                present[key] = signature
+                if not self._initialized:
+                    continue
+                if self._known.get(key) == signature or self._reported.get(key) == signature:
+                    self._pending.pop(key, None)
                     continue
                 previous = self._pending.get(key)
-                if previous is None or previous[0] != stat.st_size:
-                    self._pending[key] = (stat.st_size, 0)
+                if previous is None or previous[:2] != signature:
+                    self._pending[key] = (signature[0], signature[1], 0)
                     continue
-                stable_polls = previous[1] + 1
-                self._pending[key] = (stat.st_size, stable_polls)
-                # Timer runs every five seconds. Two unchanged polls means the
-                # file has been stable for roughly ten seconds.
+                stable_polls = previous[2] + 1
+                self._pending[key] = (signature[0], signature[1], stable_polls)
+                # The timer runs every five seconds; two unchanged polls mean
+                # the file has remained stable for roughly ten seconds.
                 if stable_polls >= 2:
                     found.append(f"{path.name} ({stat.st_size:,} bytes)")
-                    self._reported.add(key)
+                    self._reported[key] = signature
+                    self._known[key] = signature
                     self._pending.pop(key, None)
             except (OSError, PermissionError):
                 continue
@@ -101,14 +106,12 @@ class DownloadMonitor:
         for key in list(self._pending):
             if key not in present:
                 self._pending.pop(key, None)
-        # A deleted download may later be replaced by a different file with the
-        # same name. Forget old state so the replacement is inspected again.
         for key in list(self._reported):
-            if key not in present:
-                self._reported.discard(key)
+            if key not in present or present[key] != self._reported[key]:
+                self._reported.pop(key, None)
         for key in list(self._known):
             if key not in present:
-                self._known.discard(key)
+                self._known.pop(key, None)
         return found
 
 
