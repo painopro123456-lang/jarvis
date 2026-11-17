@@ -89,7 +89,7 @@ class MainWindow(QMainWindow):
         controls=QHBoxLayout()
         self.entry=QLineEdit(); self.entry.setPlaceholderText("Ask JARVIS… e.g. optimize my PC, explain this error, remember my preferences")
         self.entry.returnPressed.connect(self.send)
-        controls.addWidget(self.entry,1); controls.addWidget(self.button("SEND",self.send))
+        controls.addWidget(self.entry,1); controls.addWidget(self.button("DAILY BRIEFING",lambda:self.entry.setText("Give me a concise daily PC health and security briefing, including recommended checks." ) or self.send())); controls.addWidget(self.button("SEND",self.send))
         controls.addWidget(self.button("TALK",self.listen)); controls.addWidget(self.button("STOP SPEAKING",self.voice.stop_speaking))
         self.ai_setup=self.button("SET UP LOCAL AI",self.configure_ai); controls.addWidget(self.ai_setup)
         self.admin=self.button("ADMIN MODE",self.enable_admin); controls.addWidget(self.admin)
