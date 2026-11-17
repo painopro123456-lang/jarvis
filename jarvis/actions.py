@@ -111,6 +111,9 @@ def open_target(target: str, confirm=None) -> str:
         value = APP_ALIASES[key]
         if value.startswith("ms-"):
             os.startfile(value)
+        elif value.casefold().endswith(".msc"):
+            # .msc files are MMC snap-ins, not standalone executables.
+            subprocess.Popen(["mmc.exe", value], shell=False)
         else:
             subprocess.Popen([value], shell=False)
         return f"Opening {target}."
@@ -135,6 +138,12 @@ def open_target(target: str, confirm=None) -> str:
         return f"Opening {resolved}."
     executable = shutil.which(target.strip())
     if executable:
+        executable_path = Path(executable)
+        if executable_path.suffix.casefold() in EXECUTABLE_SUFFIXES:
+            if not confirm or not confirm(
+                f"Run this executable?\n{executable_path}\nOnly continue if you trust its source."
+            ):
+                return "Opening executable cancelled."
         subprocess.Popen([executable], shell=False)
         return f"Launching {target}."
     if platform.system() == "Windows":
