@@ -35,6 +35,22 @@ class AssistantWorker(QThread):
             self.answer.emit(f"I couldn't complete that request: {exc}")
 
 
+class ReportWorker(QThread):
+    completed_report = Signal(str, str)
+
+    def __init__(self, title: str, operation):
+        super().__init__()
+        self.title = title
+        self.operation = operation
+
+    def run(self):
+        try:
+            result = self.operation()
+        except Exception as exc:
+            result = f"Could not complete: {exc}"
+        self.completed_report.emit(self.title, str(result))
+
+
 class VoiceInputWorker(QThread):
     transcript = Signal(str)
 
@@ -65,6 +81,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("JARVIS | Personal System Intelligence")
         self.resize(1280,850)
         self.voice=Voice()
+        self._report_workers=set()
         self.download_monitor=download_guard.DownloadMonitor()
         self.download_monitor.poll()  # Establish baseline before the first timer tick.
         self._wake_queue=queue.Queue()
@@ -231,8 +248,13 @@ class MainWindow(QMainWindow):
         return QMessageBox.question(self,"JARVIS confirmation",prompt,QMessageBox.Yes|QMessageBox.No,QMessageBox.No)==QMessageBox.Yes
     def run_report(self,title,fn):
         if "QUICK SCAN" in title.upper() and not self.confirm("Start a Microsoft Defender quick scan now?"): return
-        try: result=fn()
-        except Exception as exc: result=f"Could not complete: {exc}"
+        worker=ReportWorker(title,fn)
+        worker.completed_report.connect(self._report_completed)
+        worker.finished.connect(lambda worker=worker: self._report_workers.discard(worker))
+        self._report_workers.add(worker)
+        worker.start()
+
+    def _report_completed(self,title,result):
         self.log(self.security_log,title,result)
     def update_ai_status(self):
         if hasattr(self,"ai_setup"): self.ai_setup.setText("LOCAL AI READY" if ai.is_ready() else "SET UP LOCAL AI")
@@ -370,7 +392,8 @@ class MainWindow(QMainWindow):
     def closeEvent(self,event):
         worker=getattr(self,"_assistant_worker",None)
         voice_worker=getattr(self,"_voice_worker",None)
-        if (worker is not None and worker.isRunning()) or (voice_worker is not None and voice_worker.isRunning()):
+        reports_running = any(report.isRunning() for report in self._report_workers)
+        if (worker is not None and worker.isRunning()) or (voice_worker is not None and voice_worker.isRunning()) or reports_running:
             event.ignore()
             self.chat.append("JARVIS / I'm still completing the current task. Close the window again after I finish.")
             return
