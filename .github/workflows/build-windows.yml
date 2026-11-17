@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'jarvis/**'
+      - 'tests/**'
       - 'native/**'
       - 'requirements*.txt'
       - 'build.bat'
@@ -36,7 +37,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-voice.txt pyinstaller
       - name: Check Python syntax
-        run: python -m compileall -q jarvis
+        run: python -m compileall -q jarvis tests
+      - name: Run regression tests
+        run: python -m unittest discover -s tests -v
       - name: Build single-file Windows executable
         run: pyinstaller --noconfirm --clean --onefile --windowed --name JARVIS --paths . --collect-all PySide6 --collect-all pyttsx3 --collect-all speech_recognition --collect-all pyaudio --add-binary "native/target/release/jarvis-core.exe;." jarvis/__main__.py
       - name: Publish direct EXE release asset
