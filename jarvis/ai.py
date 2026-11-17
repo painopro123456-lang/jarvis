@@ -259,9 +259,9 @@ def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> st
             return "Update cancelled."
         return actions.install_approved_app(app, upgrade=True)
     if name == "run_pc_diagnostics":
+        return diagnostics.report()
     if name == "find_duplicate_files":
         return file_tools.find_duplicates()
-        return diagnostics.report()
     return "Tool not available."
 
 
