@@ -207,3 +207,31 @@ def install_approved_app(name: str, upgrade: bool=False) -> str:
     if result.returncode:
         raise RuntimeError((result.stderr or result.stdout).strip()[-1500:] or "winget could not complete the request.")
     return f"{'Updated' if upgrade else 'Installed'} {key} using Windows Package Manager."
+
+
+def manage_software(name: str, upgrade: bool = False) -> str:
+    """Install/update a specifically named app via winget, without a hard-coded app allow-list."""
+    app_name = " ".join(str(name).strip().split())
+    if not app_name or len(app_name) > 120:
+        raise ValueError("Enter a software name between 1 and 120 characters.")
+    if any(ch in app_name for ch in ("\\r", "\\n", "\\0")):
+        raise ValueError("That software name contains invalid characters.")
+    if platform.system() != "Windows":
+        raise RuntimeError("Software management is available only on Windows.")
+    winget = shutil.which("winget")
+    if not winget:
+        raise RuntimeError("Windows Package Manager (winget) was not found. Install or update App Installer from Microsoft Store.")
+    verb = "upgrade" if upgrade else "install"
+    args = [
+        winget, verb, "--name", app_name, "--exact",
+        "--source", "winget", "--silent",
+        "--accept-package-agreements", "--accept-source-agreements",
+        "--disable-interactivity",
+    ]
+    result = subprocess.run(args, capture_output=True, text=True, timeout=1200, shell=False)
+    if result.returncode:
+        details = (result.stderr or result.stdout).strip()[-1800:]
+        if not details:
+            details = "winget could not find one exact package match or the operation failed."
+        raise RuntimeError(details)
+    return f"{'Updated' if upgrade else 'Installed'} {app_name} through Windows Package Manager.\\n\\nVerification output:\\n{(result.stdout or 'winget completed successfully.').strip()[-1200:]}"
