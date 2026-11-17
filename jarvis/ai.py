@@ -171,8 +171,7 @@ TOOLS = [
     _tool("clear_memory", "Clear all local JARVIS memory. Requires confirmation."),
     _tool("save_automation_routine", "Save a disabled automation routine for the user to review.", {"name": {"type": "string"}, "instruction": {"type": "string"}}, ["name", "instruction"]),
     _tool("list_automation_routines", "List saved automation routines."),
-    _tool("install_approved_app", "Install an app from JARVIS's small allow-list using Windows Package Manager.", {"app": {"type": "string", "enum": ["7zip","vlc","notepad++","firefox","google chrome","obs","discord","steam"]}}, ["app"]),
-    _tool("upgrade_approved_app", "Update an app from JARVIS's small allow-list using Windows Package Manager.", {"app": {"type": "string", "enum": ["7zip","vlc","notepad++","firefox","google chrome","obs","discord","steam"]}}, ["app"]),
+    _tool("manage_software", "Install or update software by its exact display name using the configured Windows Package Manager source. This is not limited to a preset app list. Use the user's requested app name; if the name is ambiguous, ask which one they mean.", {"action": {"type": "string", "enum": ["install", "update"]}, "name": {"type": "string"}}, ["action", "name"]),
     _tool("run_pc_diagnostics", "Collect read-only system, disk and recent Windows error diagnostics."),
     _tool("find_duplicate_files", "Find duplicate files in Desktop, Documents and Downloads without deleting anything."),
 ]
@@ -248,16 +247,16 @@ def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> st
         return automation.add_routine(str(args["name"]), str(args["instruction"]))
     if name == "list_automation_routines":
         return automation.report()
-    if name == "install_approved_app":
-        app=str(args["app"]).lower()
-        if confirm and not confirm(f"Install {app} using Windows Package Manager?"):
-            return "Installation cancelled."
-        return actions.install_approved_app(app, upgrade=False)
-    if name == "upgrade_approved_app":
-        app=str(args["app"]).lower()
-        if confirm and not confirm(f"Update {app} using Windows Package Manager?"):
-            return "Update cancelled."
-        return actions.install_approved_app(app, upgrade=True)
+    if name == "manage_software":
+        action = str(args["action"]).lower()
+        app_name = str(args["name"]).strip()
+        if action not in {"install", "update"}:
+            return "I can only install or update software."
+        if not app_name or len(app_name) > 120:
+            return "Please give me a software name up to 120 characters."
+        if confirm and not confirm(f"{'Install' if action == 'install' else 'Update'} “{app_name}” from the configured Windows Package Manager source?"):
+            return "Software change cancelled."
+        return actions.manage_software(app_name, upgrade=(action == "update"))
     if name == "run_pc_diagnostics":
         return diagnostics.report()
     if name == "find_duplicate_files":
@@ -276,7 +275,7 @@ an occasional quick joke when the moment fits, but do not force jokes, overdo sa
 security, privacy, data-loss, health, or emergency situations. Match the user's energy without becoming rude.
 Be warm and human-sounding, concise by default, and serious when the stakes are serious. Address the user as
 'sir' only occasionally, not in every reply. Understand requests in context and use available PC tools when helpful. Use local memory only when the user asks you to remember something or when a preference is clearly durable; explain that memory is stored on this PC. For automation, save routines disabled and never imply they run in the background unless a scheduler has actually been configured. For security, treat process/network indicators as leads, not proof of malware. Create a restore point before major system changes when available.
-Never claim an action succeeded unless a tool returned success. The tools are a strict allow-list: do not
+Never claim an action succeeded unless a tool returned success. The tools are a strict capability boundary: choose the closest available tool and use it to complete the user's actual task, not merely describe a preset command. Software installation and updates accept arbitrary requested app names, but must use the dedicated package-manager tool and confirmation; never invent package IDs or run shell commands. Do not
 invent tools, execute shell commands, run arbitrary code, exfiltrate secrets, delete files, or disable
 Defender/firewall/security. Explain consequential changes and require confirmation through the app.
 If a requested capability is unavailable, say so honestly and suggest a safe next step."""
