@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 from jarvis.assistant import respond
 from jarvis.system_monitor import snapshot, recommendations
 from jarvis.voice import Voice
-from jarvis import actions, ai, security, memory, automation, vision, native_core, activity
+from jarvis import actions, ai, security, memory, automation, vision, native_core, activity, download_guard
 
 class Metric(QFrame):
     def __init__(self,title):
@@ -29,6 +29,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("JARVIS | Personal System Intelligence")
         self.resize(1280,850)
         self.voice=Voice()
+        self.download_monitor=download_guard.DownloadMonitor()
         self._wake_queue=queue.Queue()
         root=QWidget(); root.setObjectName("root"); self.setCentralWidget(root)
         outer=QVBoxLayout(root)
@@ -63,6 +64,7 @@ class MainWindow(QMainWindow):
             QTabBar::tab:selected { background:#123e5b; color:#ffffff; }
         """)
         self.timer=QTimer(self); self.timer.timeout.connect(self.refresh); self.timer.timeout.connect(self.update_ai_status); self.timer.start(3000)
+        self.download_timer=QTimer(self); self.download_timer.timeout.connect(self.poll_downloads); self.download_timer.start(5000)
         self.refresh(); self.update_ai_status()
 
     def button(self,label,callback):
@@ -99,7 +101,7 @@ class MainWindow(QMainWindow):
 
     def _build_security(self):
         page=QWidget(); layout=QVBoxLayout(page)
-        intro=QLabel("SECURITY CENTER  /  Read-only inspection and Microsoft Defender actions"); intro.setObjectName("hero"); layout.addWidget(intro)
+        intro=QLabel("SECURITY CENTER  /  Third-party antivirus monitoring and threat inspection"); intro.setObjectName("hero"); layout.addWidget(intro)
         row=QHBoxLayout()
         for label,fn in [
             ("DEFENDER STATUS",actions.defender_status),
@@ -122,10 +124,14 @@ class MainWindow(QMainWindow):
         row3.addWidget(self.button("DEFENDER THREAT HISTORY",lambda:self.run_report("Defender threat history",security.threat_history)))
         row3.addWidget(self.button("CHECK FILE SIGNATURE + HASH",self.inspect_file_trust_ui))
         layout.addLayout(row3)
+        row4=QHBoxLayout()
+        row4.addWidget(self.button("CHECK REGISTERED ANTIVIRUS",lambda:self.run_report("Antivirus inventory",download_guard.antivirus_inventory)))
+        row4.addWidget(self.button("DOWNLOAD GUARD STATUS",lambda:self.run_report("Download guard",download_guard.monitor_status)))
+        layout.addLayout(row4)
         self.security_log=QTextEdit(); self.security_log.setReadOnly(True)
         self.security_log.setPlaceholderText("Security inspection results appear here. Review indicators carefully; they are not automatic malware verdicts.")
         layout.addWidget(self.security_log,1)
-        note=QLabel("JARVIS never disables Defender or Firewall. Scans are performed by Microsoft Defender. Network/process indicators are leads, not proof of compromise.")
+        note=QLabel("Download Guard watches Downloads for new installers, executables, scripts and shortcuts and alerts you. Actual pre-execution blocking and quarantine must be provided by an installed third-party antivirus with real-time protection enabled. JARVIS does not claim to block files itself.")
         note.setObjectName("muted"); note.setWordWrap(True); layout.addWidget(note)
         self.tabs.addTab(page,"SECURITY")
 
@@ -171,6 +177,16 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("Wake-word recognition uses Google's online speech recognition service when enabled. Screen vision uses a separate optional local model download; screenshots stay on this PC."))
         self.settings_log=QTextEdit(); self.settings_log.setReadOnly(True); layout.addWidget(self.settings_log,1)
         self.tabs.addTab(page,"SETTINGS")
+
+    def poll_downloads(self):
+        try:
+            new_files=self.download_monitor.poll()
+            if new_files:
+                message="New potentially risky download(s) detected:\\n" + "\\n".join(new_files) + "\\nDo not open them until your antivirus has completed its scan."
+                self.log(self.security_log,"DOWNLOAD GUARD ALERT",message)
+                QMessageBox.warning(self,"JARVIS download warning",message)
+        except Exception as exc:
+            self.log(self.security_log,"DOWNLOAD GUARD ERROR",str(exc))
 
     def log(self,area,title,result):
         area.append(f"{title}\n{result}\n")
