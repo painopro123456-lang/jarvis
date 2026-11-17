@@ -6,6 +6,7 @@ import os
 import platform
 import subprocess
 import sys
+import shutil
 import webbrowser
 from pathlib import Path
 
@@ -16,7 +17,13 @@ APP_ALIASES = {
     "task manager": "taskmgr.exe", "file explorer": "explorer.exe",
     "settings": "ms-settings:", "task scheduler": "taskschd.msc", "resource monitor": "resmon.exe", "services": "services.msc", "windows security": "ms-settings:windowsdefender",
 }
-APPROVED_WINGET_APPS = {\n    "7zip": "7zip.7zip", "vlc": "VideoLAN.VLC", "notepad++": "Notepad++.Notepad++",\n    "firefox": "Mozilla.Firefox", "google chrome": "Google.Chrome", "obs": "OBSProject.OBSStudio",\n    "discord": "Discord.Discord", "steam": "Valve.Steam",\n}\n\nPOWER_PLANS = {
+APPROVED_WINGET_APPS = {
+    "7zip": "7zip.7zip", "vlc": "VideoLAN.VLC", "notepad++": "Notepad++.Notepad++",
+    "firefox": "Mozilla.Firefox", "google chrome": "Google.Chrome", "obs": "OBSProject.OBSStudio",
+    "discord": "Discord.Discord", "steam": "Valve.Steam",
+}
+
+POWER_PLANS = {
     "balanced": "381b4222-f694-41f0-9685-ff5bb260df2e",
     "high performance": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
     "ultimate performance": "e9a42b02-d5df-448d-aa00-03f14749eb61",
