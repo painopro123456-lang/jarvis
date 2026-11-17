@@ -101,7 +101,7 @@ def respond(message: str, confirm=None) -> str:
                                 break
                 except (PermissionError, OSError):
                     pass
-        return "Found files:\\n" + "\\n".join(matches) if matches else "No matching files found in Desktop, Documents, or Downloads."
+        return "Found files:\n" + "\n".join(matches) if matches else "No matching files found in Desktop, Documents, or Downloads."
     if lower in {"help", "what can you do", "commands"}:
         return ("Try: PC status; open Notepad; open C:\\\\path\\\\to\\\\file; list processes; "
                 "show startup apps; Defender status; firewall status; active network connections; scan file C:\\\\path\\\\file.exe; remember I prefer dark mode; show memory; list routines; high performance; "
