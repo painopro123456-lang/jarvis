@@ -331,6 +331,15 @@ def respond(message: str, confirm: Callable[[str], bool] | None = None) -> str:
                 output = _execute(name, args, confirm)
             except Exception as exc:
                 output = f"Action failed: {exc}"
+            try:
+                from jarvis import activity
+                lowered = str(output).lower()
+                succeeded = not any(word in lowered for word in (
+                    "cancelled", "canceled", "action failed", "could not complete"
+                ))
+                activity.record(name, succeeded)
+            except Exception:
+                pass
             _HISTORY.append({
                 "role": "tool", "tool_name": name, "content": str(output)[:6000]
             })
