@@ -1,6 +1,6 @@
 # JARVIS for Windows
 
-A local-first Windows desktop assistant with a conversational local AI, voice controls, PC telemetry, memory, security inspection, troubleshooting and guarded automation.
+A local-first Windows desktop assistant being migrated toward a lightweight Rust system core, with conversational local AI, voice controls, PC telemetry, memory, security inspection, troubleshooting and guarded automation.
 
 ## No API key required
 
@@ -15,6 +15,8 @@ JARVIS uses [Ollama](https://ollama.com) to run its language model locally. Ther
 - Proactive system recommendations and a one-click daily PC briefing.
 
 ### PC operator
+- Rust native-core foundation, compiled as a small Windows sidecar and bundled into the JARVIS executable. The current desktop interface is still Python/PySide6 during the staged migration; it is not yet a fully Rust application.
+- Read-only driver audit: lists installed Plug-and-Play driver records and asks Windows Update which driver updates it currently offers. It never installs drivers. This is not a complete comparison against every manufacturer's newest release.
 - Live CPU, RAM, disk, battery and top-process monitoring.
 - Process and startup-app inspection.
 - Open common Windows apps, folders and existing paths.
@@ -30,6 +32,9 @@ JARVIS uses [Ollama](https://ollama.com) to run its language model locally. Ther
 - Ask Microsoft Defender to scan a selected file or run a quick scan.
 - JARVIS does not disable Defender or Windows Firewall. Process and network indicators are review leads, not proof of malware. Defender handles its own quarantine workflow.
 
+### Browser access roadmap
+- Browser automation is planned as a permissioned feature. The current build can open the default browser, but does not yet have full tab/page interaction. Future browser actions will use a visible, user-controlled browser session and ask before submitting forms, downloading files, sending messages or purchasing anything.
+
 ### Voice and vision
 - Windows text-to-speech with calm, standard and energetic rate presets; stop-speaking control.
 - Optional microphone input and wake word. Wake-word recognition uses Google's online speech-recognition service when enabled; it is not an always-on offline recognizer.
@@ -40,7 +45,7 @@ JARVIS uses [Ollama](https://ollama.com) to run its language model locally. Ther
 - No silent background task execution or unrestricted shell access. Windows Task Scheduler can be opened by the user for advanced scheduling.
 
 ## Safety boundaries
-JARVIS starts without administrator privileges. Risky actions require a confirmation dialog. Its AI can call only explicitly allow-listed functions; model output is never passed directly to arbitrary CMD or PowerShell. User files are not silently deleted. JARVIS is a companion to Windows Security, not a replacement for antivirus software.
+JARVIS starts without administrator privileges. Risky actions require a confirmation dialog. No software can guarantee that an AI will never make a mistake; JARVIS is being designed around narrow permissions, previews, explicit approvals, verification and recovery rather than blind trust. Its AI can call only explicitly allow-listed functions; model output is never passed directly to arbitrary CMD or PowerShell. User files are not silently deleted. JARVIS is a companion to Windows Security, not a replacement for antivirus software.
 
 ## Run from source
 1. Install Python 3.11 on Windows.
