@@ -12,6 +12,7 @@ JARVIS uses [Ollama](https://ollama.com) to run its language model locally. Ther
 - Independent-minded assistant personality: can challenge assumptions, explain reasoning, admit mistakes and revise its view when given better evidence.
 - Multi-step tool use with step-by-step result inspection, bounded retries and explicit success/failure reporting.
 - A local action history view in the Security Center; only minimal action metadata is recorded.
+- A bounded coding workspace: create projects, inspect project structure and manifests, read/write source files, and run allow-listed Python, Rust, Node.js and .NET checks/builds. File edits and project commands require confirmation; results must be inspected and verified.
 - Private local memory for notes and preferences, with view and clear controls.
 - Proactive system recommendations and a one-click daily PC briefing.
 
@@ -36,6 +37,12 @@ JARVIS uses [Ollama](https://ollama.com) to run its language model locally. Ther
 - Ask Microsoft Defender to scan a selected file or run a quick scan.
 - Inspect a selected file's SHA-256 and Authenticode signer/status locally; files are not executed or uploaded by this check.
 - JARVIS does not disable Defender or Windows Firewall and does not claim to replace antivirus. Process/network indicators and signature results are evidence to review, not proof that a file or PC is clean. Defender handles its own quarantine workflow. These checks are defensive visibility features, not a guarantee against advanced malware.
+
+### Coding workspace
+- Default workspace: `Documents/JARVIS-Workspace` (override with `JARVIS_WORKSPACE`).
+- JARVIS can create project folders, inspect project files/manifests, read UTF-8 source files, and create or replace source files inside that workspace only.
+- It can run a fixed set of Python, Cargo, npm and .NET test/build commands from the selected project directory. Running project commands requires confirmation because build scripts execute code.
+- It does not yet edit arbitrary folders, directly operate a GitHub repository, or run unrestricted terminal commands. Copy a project into the workspace before asking JARVIS to work on it.
 
 ### Browser access roadmap
 - Browser automation is planned as a permissioned feature. The current build can open the default browser, but does not yet have full tab/page interaction. Future browser actions will use a visible, user-controlled browser session and ask before submitting forms, downloading files, sending messages or purchasing anything.
