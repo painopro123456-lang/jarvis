@@ -75,11 +75,11 @@ class CodingWorkspaceTests(unittest.TestCase):
 
     def test_diff_preview_does_not_modify_file(self):
         source = self.project / "main.py"
-        source.write_text("print('old')\\n", encoding="utf-8")
-        preview = coding.preview_file_change("demo", "main.py", "print('new')\\n")
+        source.write_text("print('old')\n", encoding="utf-8")
+        preview = coding.preview_file_change("demo", "main.py", "print('new')\n")
         self.assertIn("-print('old')", preview)
         self.assertIn("+print('new')", preview)
-        self.assertEqual(source.read_text(encoding="utf-8"), "print('old')\\n")
+        self.assertEqual(source.read_text(encoding="utf-8"), "print('old')\n")
 
 
 class ConfirmationSafetyTests(unittest.TestCase):
