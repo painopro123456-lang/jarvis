@@ -14,9 +14,9 @@ import psutil
 APP_ALIASES = {
     "notepad": "notepad.exe", "calculator": "calc.exe", "paint": "mspaint.exe",
     "task manager": "taskmgr.exe", "file explorer": "explorer.exe",
-    "settings": "ms-settings:",
+    "settings": "ms-settings:", "task scheduler": "taskschd.msc", "resource monitor": "resmon.exe", "services": "services.msc", "windows security": "windowsdefender:",
 }
-POWER_PLANS = {
+APPROVED_WINGET_APPS = {\n    "7zip": "7zip.7zip", "vlc": "VideoLAN.VLC", "notepad++": "Notepad++.Notepad++",\n    "firefox": "Mozilla.Firefox", "google chrome": "Google.Chrome", "obs": "OBSProject.OBSStudio",\n    "discord": "Discord.Discord", "steam": "Valve.Steam",\n}\n\nPOWER_PLANS = {
     "balanced": "381b4222-f694-41f0-9685-ff5bb260df2e",
     "high performance": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
     "ultimate performance": "e9a42b02-d5df-448d-aa00-03f14749eb61",
@@ -184,3 +184,19 @@ def lock_pc() -> str:
         raise RuntimeError("PC lock is available on Windows.")
     ctypes.windll.user32.LockWorkStation()
     return "Locking Windows."
+
+
+def install_approved_app(name: str, upgrade: bool=False) -> str:
+    key=name.strip().lower()
+    if key not in APPROVED_WINGET_APPS:
+        raise ValueError("That app is not on JARVIS's approved install list. Available: "+", ".join(APPROVED_WINGET_APPS))
+    if platform.system() != "Windows":
+        raise RuntimeError("App installation is available only on Windows.")
+    winget=shutil.which("winget")
+    if not winget: raise RuntimeError("Windows Package Manager (winget) was not found.")
+    package=APPROVED_WINGET_APPS[key]
+    args=[winget,"upgrade" if upgrade else "install","--id",package,"--exact","--silent","--accept-package-agreements","--accept-source-agreements"]
+    result=subprocess.run(args,capture_output=True,text=True,timeout=900,shell=False)
+    if result.returncode:
+        raise RuntimeError((result.stderr or result.stdout).strip()[-1500:] or "winget could not complete the request.")
+    return f"{'Updated' if upgrade else 'Installed'} {key} using Windows Package Manager."
