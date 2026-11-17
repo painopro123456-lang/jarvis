@@ -105,7 +105,7 @@ def inspect_file_trust(path_text: str) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     if platform.system() != "Windows":
-        return f"File: {path.name}\\nSHA-256: {digest.hexdigest()}\\nAuthenticode signature inspection requires Windows."
+        return f"File: {path.name}\nSHA-256: {digest.hexdigest()}\nAuthenticode signature inspection requires Windows."
     escaped = str(path).replace("'", "''")
     script = (
         f"$s=Get-AuthenticodeSignature -LiteralPath '{escaped}'; "
@@ -119,4 +119,4 @@ def inspect_file_trust(path_text: str) -> str:
     )
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or "Could not inspect the file signature.")
-    return f"File: {path.name}\\nSHA-256: {digest.hexdigest()}\\n{result.stdout.strip()}\\nA valid signature identifies a signer; it does not guarantee that a file is harmless."
+    return f"File: {path.name}\nSHA-256: {digest.hexdigest()}\n{result.stdout.strip()}\nA valid signature identifies a signer; it does not guarantee that a file is harmless."
