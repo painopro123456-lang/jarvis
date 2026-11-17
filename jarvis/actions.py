@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ctypes
+import difflib
 import os
 import platform
 import subprocess
@@ -54,6 +55,46 @@ def relaunch_as_admin() -> str:
     return "Windows UAC approval requested. JARVIS will reopen with administrator privileges."
 
 
+def _start_menu_shortcuts():
+    """Return installed-app shortcuts from the current user's and common Start Menus."""
+    roots = [
+        Path(os.environ.get("APPDATA", "")) / "Microsoft/Windows/Start Menu/Programs",
+        Path(os.environ.get("PROGRAMDATA", "")) / "Microsoft/Windows/Start Menu/Programs",
+    ]
+    found = []
+    for root in roots:
+        if not root.is_dir():
+            continue
+        try:
+            for shortcut in root.rglob("*.lnk"):
+                if shortcut.is_file():
+                    found.append(shortcut)
+                    if len(found) >= 2500:
+                        return found
+        except (OSError, PermissionError):
+            continue
+    return found
+
+
+def _find_start_menu_app(query: str):
+    wanted = " ".join(query.casefold().split())
+    matches = []
+    for shortcut in _start_menu_shortcuts():
+        label = shortcut.stem
+        normal = " ".join(label.casefold().replace("&", " ").split())
+        if wanted == normal or wanted.replace(" ", "") == normal.replace(" ", ""):
+            return [shortcut]
+        ratio = difflib.SequenceMatcher(None, wanted, normal).ratio()
+        if wanted in normal or ratio >= 0.78:
+            matches.append((ratio, shortcut))
+    matches.sort(key=lambda item: item[0], reverse=True)
+    if not matches:
+        return []
+    best = matches[0][0]
+    # Do not guess between similarly named apps.
+    return [path for score, path in matches[:5] if score >= max(0.78, best - 0.08)]
+
+
 def open_target(target: str) -> str:
     key = target.strip().lower()
     if key in APP_ALIASES:
@@ -76,7 +117,19 @@ def open_target(target: str) -> str:
     if path.exists():
         os.startfile(str(path.resolve()))
         return f"Opening {path}."
-    raise ValueError("I couldn't find that app or path. Try an app name or a full file/folder path.")
+    executable = shutil.which(target.strip())
+    if executable:
+        subprocess.Popen([executable], shell=False)
+        return f"Launching {target}."
+    if platform.system() == "Windows":
+        matches = _find_start_menu_app(target)
+        if len(matches) == 1:
+            os.startfile(str(matches[0]))
+            return f"Opening {matches[0].stem}."
+        if len(matches) > 1:
+            names = ", ".join(path.stem for path in matches)
+            raise ValueError(f"I found several similar Start Menu apps: {names}. Tell me the exact app name.")
+    raise ValueError("I couldn't find that app or path. Try its Start Menu name or a full file/folder path.")
 
 
 def process_report() -> str:
