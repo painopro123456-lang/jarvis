@@ -219,9 +219,9 @@ class MainWindow(QMainWindow):
         try:
             new_files=self.download_monitor.poll()
             if new_files:
-                message="New potentially risky download(s) detected:\\n" + "\\n".join(new_files) + "\\nDo not open them until your antivirus has completed its scan."
+                message="New potentially risky download(s) detected:\n" + "\n".join(new_files) + "\nDo not open them until your antivirus has completed its scan."
                 self.log(self.security_log,"DOWNLOAD GUARD ALERT",message)
-                self.chat.append("JARVIS / Background security notice: " + message.replace("\\n", " · "))
+                self.chat.append("JARVIS / Background security notice: " + message.replace("\n", " · "))
         except Exception as exc:
             self.log(self.security_log,"DOWNLOAD GUARD ERROR",str(exc))
 
@@ -362,10 +362,10 @@ class MainWindow(QMainWindow):
         try:
             path=vision.capture_screen()
             if not ai.vision_model_installed():
-                self.settings_log.append(f"Screenshot saved locally: {path}\\nEnable the optional screen-vision model to analyze it.")
+                self.settings_log.append(f"Screenshot saved locally: {path}\nEnable the optional screen-vision model to analyze it.")
                 return
             result=ai.analyze_image(str(path))
-            self.settings_log.append(f"Screen analysis ({path.name}):\\n{result}")
+            self.settings_log.append(f"Screen analysis ({path.name}):\n{result}")
         except Exception as exc: QMessageBox.warning(self,"Screen vision",str(exc))
     def closeEvent(self,event):
         worker=getattr(self,"_assistant_worker",None)
