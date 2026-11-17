@@ -187,6 +187,7 @@ TOOLS = [
     _tool("coding_workspace", "Show the local JARVIS coding workspace and available projects."),
     _tool("create_code_project", "Create a new project folder inside the JARVIS coding workspace.", {"name": {"type": "string"}}, ["name"]),
     _tool("inspect_code_project", "Inspect a project's file tree and common project manifests. Read-only.", {"project": {"type": "string"}}, ["project"]),
+    _tool("search_code_project", "Search source and text files across a project for a symbol, function, error string or TODO. Read-only and bounded.", {"project": {"type": "string"}, "query": {"type": "string"}}, ["project", "query"]),
     _tool("read_code_file", "Read a UTF-8 source or project text file inside the JARVIS coding workspace.", {"project": {"type": "string"}, "path": {"type": "string"}}, ["project", "path"]),
     _tool("preview_code_change", "Generate a read-only unified diff preview for a proposed source-file change. Does not write anything.", {"project": {"type": "string"}, "path": {"type": "string"}, "content": {"type": "string"}}, ["project", "path", "content"]),
     _tool("write_code_file", "Create or replace a UTF-8 source file inside the JARVIS coding workspace. Always explain the change and obtain confirmation first.", {"project": {"type": "string"}, "path": {"type": "string"}, "content": {"type": "string"}}, ["project", "path", "content"]),
@@ -329,6 +330,9 @@ def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> st
     if name == "inspect_code_project":
         from jarvis import coding
         return coding.inspect_project(str(args["project"])[:240])
+    if name == "search_code_project":
+        from jarvis import coding
+        return coding.search_project(str(args["project"])[:240], str(args["query"])[:120])
     if name == "read_code_file":
         from jarvis import coding
         return coding.read_file(str(args["project"])[:240], str(args["path"])[:500])
