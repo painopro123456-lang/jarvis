@@ -5,6 +5,7 @@ explicitly allow-listed and require confirmation because build/test scripts exec
 """
 from __future__ import annotations
 
+import difflib
 import os
 import shutil
 import subprocess
@@ -141,6 +142,29 @@ def write_file(project: str, relative_path: str, content: str) -> str:
             except OSError:
                 pass
     return f"Wrote {relative_path} ({path.stat().st_size} bytes).{backup_note} Re-read the file to verify it."
+
+
+def preview_file_change(project: str, relative_path: str, content: str) -> str:
+    """Return a bounded unified diff without changing the project."""
+    if not isinstance(content, str) or len(content.encode("utf-8")) > MAX_WRITE_BYTES:
+        raise ValueError(f"Proposed content exceeds the {MAX_WRITE_BYTES}-byte limit.")
+    path = _file_path(project, relative_path)
+    if path.exists() and not path.is_file():
+        raise ValueError("The destination exists and is not a regular file.")
+    if path.exists():
+        if path.stat().st_size > MAX_READ_BYTES:
+            raise ValueError(f"Existing file is larger than the {MAX_READ_BYTES}-byte preview limit.")
+        before = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    else:
+        before = []
+    after = content.splitlines(keepends=True)
+    diff = "".join(difflib.unified_diff(
+        before, after, fromfile=f"a/{relative_path}" if before else "/dev/null",
+        tofile=f"b/{relative_path}", n=3
+    ))
+    if not diff:
+        return f"No changes proposed for {relative_path}."
+    return f"Proposed change for {relative_path} (preview only; nothing written):\\n{diff[:18000]}"
 
 COMMANDS = {
     "python_tests": ([sys.executable, "-m", "pytest", "-q"], "Run Python test suite"),
