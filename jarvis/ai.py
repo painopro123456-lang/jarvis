@@ -12,6 +12,9 @@ import urllib.request
 from typing import Callable
 
 OLLAMA_URL = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
+# Release the model's RAM after a short idle period; set JARVIS_MODEL_KEEP_ALIVE
+# to another Ollama duration (for example "2m") if faster repeat prompts matter.
+MODEL_KEEP_ALIVE = os.getenv("JARVIS_MODEL_KEEP_ALIVE", "30s")
 def _choose_model() -> str:
     """Choose a modest local model based on installed physical RAM."""
     try:
@@ -361,6 +364,7 @@ def respond(message: str, confirm: Callable[[str], bool] | None = None) -> str:
             "model": MODEL,
             "messages": [{"role": "system", "content": SYSTEM_PROMPT}] + _HISTORY,
             "tools": TOOLS,
+            "keep_alive": MODEL_KEEP_ALIVE,
             "stream": False,
             "options": {"temperature": 0.65, "num_ctx": 8192, "num_predict": 1200},
         }
