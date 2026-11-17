@@ -234,4 +234,4 @@ def manage_software(name: str, upgrade: bool = False) -> str:
         if not details:
             details = "winget could not find one exact package match or the operation failed."
         raise RuntimeError(details)
-    return f"{'Updated' if upgrade else 'Installed'} {app_name} through Windows Package Manager.\\n\\nVerification output:\\n{(result.stdout or 'winget completed successfully.').strip()[-1200:]}"
+    return f"{'Updated' if upgrade else 'Installed'} {app_name} through Windows Package Manager.\n\nVerification output:\n{(result.stdout or 'winget completed successfully.').strip()[-1200:]}"
