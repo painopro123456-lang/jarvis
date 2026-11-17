@@ -22,7 +22,8 @@ JARVIS uses [Ollama](https://ollama.com) to run its language model locally. Ther
 - Open common Windows apps, folders and existing paths.
 - Change supported power plans after confirmation.
 - Find files and detect duplicates in Desktop, Documents and Downloads. Duplicate detection is read-only; it never deletes files.
-- Install/update only a small approved list of applications through Windows Package Manager (winget), after confirmation.
+- Discover software from a plain-language description by searching the Windows Package Manager catalogue; JARVIS presents candidates for the user to compare and choose before any installation.
+- Install/update a specifically chosen application through Windows Package Manager (winget), after confirmation.
 - Read-only diagnostics including recent critical/error System events.
 - Create a Windows restore point before a major change (requires administrator mode and confirmation).
 
