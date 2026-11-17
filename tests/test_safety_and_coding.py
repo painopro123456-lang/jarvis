@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from jarvis import assistant, coding, download_guard
+from jarvis import assistant, coding, download_guard, security
 
 
 class CodingWorkspaceTests(unittest.TestCase):
@@ -68,6 +68,17 @@ class ConfirmationSafetyTests(unittest.TestCase):
             result = assistant.respond("restart my PC", confirm=None)
         self.assertIn("cancelled", result.lower())
         schedule.assert_not_called()
+
+
+class FileTrustReportTests(unittest.TestCase):
+    def test_non_windows_report_uses_real_line_breaks(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "sample.bin"
+            path.write_bytes(b"sample")
+            with patch("jarvis.security.platform.system", return_value="Linux"):
+                report = security.inspect_file_trust(str(path))
+        self.assertIn("\nSHA-256:", report)
+        self.assertNotIn("\\nSHA-256:", report)
 
 
 class DownloadMonitorTests(unittest.TestCase):
