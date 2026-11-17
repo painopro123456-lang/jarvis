@@ -1,5 +1,5 @@
 from __future__ import annotations
-import sys, webbrowser
+import sys, webbrowser, queue
 from pathlib import Path
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFont
@@ -28,7 +28,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("JARVIS | Personal System Intelligence")
         self.resize(1280,850)
-        self.voice=Voice()
+        self.voice=Voice()\n        self._wake_queue=queue.Queue()
         root=QWidget(); root.setObjectName("root"); self.setCentralWidget(root)
         outer=QVBoxLayout(root)
         header=QHBoxLayout()
@@ -110,7 +110,7 @@ class MainWindow(QMainWindow):
             row.addWidget(self.button(label,lambda checked=False,f=fn,l=label:self.run_report(l,f)))
         layout.addLayout(row)
         row2=QHBoxLayout()
-        row2.addWidget(self.button("SCAN A FILE",self.scan_file))
+        row2.addWidget(self.button("FIND DUPLICATE FILES",lambda:self.run_report("Duplicate files",__import__("jarvis.file_tools",fromlist=["find_duplicates"]).find_duplicates)))\n        row2.addWidget(self.button("SCAN A FILE",self.scan_file))
         row2.addWidget(self.button("CREATE RESTORE POINT",self.restore_point))
         row2.addWidget(self.button("STARTUP APPS",lambda:self.run_report("Startup apps",actions.startup_report)))
         layout.addLayout(row2)
