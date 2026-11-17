@@ -28,7 +28,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("JARVIS | Personal System Intelligence")
         self.resize(1280,850)
-        self.voice=Voice()\n        self._wake_queue=queue.Queue()
+        self.voice=Voice()
+        self._wake_queue=queue.Queue()
         root=QWidget(); root.setObjectName("root"); self.setCentralWidget(root)
         outer=QVBoxLayout(root)
         header=QHBoxLayout()
@@ -110,8 +111,8 @@ class MainWindow(QMainWindow):
             row.addWidget(self.button(label,lambda checked=False,f=fn,l=label:self.run_report(l,f)))
         layout.addLayout(row)
         row2=QHBoxLayout()
-        row2.addWidget(self.button("FIND DUPLICATE FILES",lambda:self.run_report("Duplicate files",__import__("jarvis.file_tools",fromlist=["find_duplicates"]).find_duplicates)))\n        row2.addWidget(self.button("SCAN A FILE",self.scan_file))
-        row2.addWidget(self.button("CREATE RESTORE POINT",self.restore_point))
+        row2.addWidget(self.button("FIND DUPLICATE FILES",self.find_duplicates))
+        row2.addWidget(self.button("SCAN A FILE",self.scan_file))
         row2.addWidget(self.button("STARTUP APPS",lambda:self.run_report("Startup apps",actions.startup_report)))
         layout.addLayout(row2)
         self.security_log=QTextEdit(); self.security_log.setReadOnly(True)
@@ -169,6 +170,7 @@ class MainWindow(QMainWindow):
     def confirm(self,prompt):
         return QMessageBox.question(self,"JARVIS confirmation",prompt,QMessageBox.Yes|QMessageBox.No,QMessageBox.No)==QMessageBox.Yes
     def run_report(self,title,fn):
+        if "QUICK SCAN" in title.upper() and not self.confirm("Start a Microsoft Defender quick scan now?"): return
         try: result=fn()
         except Exception as exc: result=f"Could not complete: {exc}"
         self.log(self.security_log,title,result)
@@ -186,6 +188,11 @@ class MainWindow(QMainWindow):
             try: self.chat.append("JARVIS / "+actions.relaunch_as_admin()); QApplication.quit()
             except Exception as exc: QMessageBox.warning(self,"Administrator mode",str(exc))
     def refresh(self):
+        while not self._wake_queue.empty():
+            try:
+                phrase=self._wake_queue.get_nowait()
+                self.entry.setText(phrase); self.send()
+            except queue.Empty: break
         try:
             d=snapshot()
             for widget,key in ((self.cpu,"cpu"),(self.ram,"memory_percent"),(self.disk,"disk_percent")):
@@ -208,6 +215,9 @@ class MainWindow(QMainWindow):
         self.chat.append("JARVIS / Listening…"); QApplication.processEvents()
         try: self.entry.setText(self.voice.listen_once()); self.send()
         except Exception as exc: QMessageBox.information(self,"Voice input",str(exc))
+    def find_duplicates(self):
+        from jarvis import file_tools
+        self.run_report("Duplicate files",file_tools.find_duplicates)
     def scan_file(self):
         path,_=QFileDialog.getOpenFileName(self,"Choose a file to scan")
         if path and self.confirm(f"Ask Microsoft Defender to scan this file?\n{path}"):
@@ -235,8 +245,7 @@ class MainWindow(QMainWindow):
             self.settings_log.append(result)
         except Exception as exc: QMessageBox.warning(self,"Wake word",str(exc))
     def _wake_command(self,phrase):
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(0,lambda:(self.entry.setText(phrase),self.send()))
+        self._wake_queue.put(phrase)
     def disable_wake_word(self): self.settings_log.append(self.voice.stop_wake_word())
     def enable_vision(self):
         if not ai.ollama_installed():
@@ -244,14 +253,14 @@ class MainWindow(QMainWindow):
         if self.confirm("Download the optional screen-vision model? It is a separate, potentially large download."):
             self.settings_log.append(ai.start_vision_download())
     def analyze_screen(self):
+        if not self.confirm("Capture the current screen? The image stays on this PC unless you ask the local vision model to inspect it."): return
         try:
             path=vision.capture_screen()
             if not ai.vision_model_installed():
-                self.settings_log.append(f"Screenshot saved locally: {path}\nEnable the optional screen-vision model to analyze it.")
+                self.settings_log.append(f"Screenshot saved locally: {path}\\nEnable the optional screen-vision model to analyze it.")
                 return
-            if self.confirm("Capture the current screen and send it to the local vision model for analysis?"):
-                result=ai.analyze_image(str(path))
-                self.settings_log.append(f"Screen analysis ({path.name}):\n{result}")
+            result=ai.analyze_image(str(path))
+            self.settings_log.append(f"Screen analysis ({path.name}):\\n{result}")
         except Exception as exc: QMessageBox.warning(self,"Screen vision",str(exc))
     def closeEvent(self,event):
         self.voice.stop_wake_word(); self.voice.stop_speaking(); super().closeEvent(event)
