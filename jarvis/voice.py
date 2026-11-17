@@ -44,6 +44,8 @@ class Voice:
 
     def start_wake_word(self, callback, wake_word: str="jarvis"):
         """Opt-in continuous listener. Speech recognition is sent to Google's service."""
+        if self._wake_stop is not None:
+            return "Wake-word listening is already enabled."
         try:
             import speech_recognition as sr
             recognizer=sr.Recognizer()
