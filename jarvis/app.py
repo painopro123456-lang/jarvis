@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
             QTabBar::tab { background:#0d1d30; color:#91abc5; padding:12px 20px; margin-right:4px; border-top-left-radius:8px; border-top-right-radius:8px; }
             QTabBar::tab:selected { background:#123e5b; color:#ffffff; }
         """)
-        self.timer=QTimer(self); self.timer.timeout.connect(self.refresh); self.timer.timeout.connect(self.update_ai_status); self.timer.start(3000)
+        self.timer=QTimer(self); self.timer.timeout.connect(self.refresh); self.timer.timeout.connect(self.update_ai_status); self.timer.start(8000)
         self.download_timer=QTimer(self); self.download_timer.timeout.connect(self.poll_downloads); self.download_timer.start(5000)
         self.refresh(); self.update_ai_status()
 
@@ -115,7 +115,7 @@ class MainWindow(QMainWindow):
         for i,w in enumerate((self.cpu,self.ram,self.disk,self.battery)): metrics.addWidget(w,0,i)
         layout.addLayout(metrics)
         split=QHBoxLayout()
-        self.chat=QTextEdit(); self.chat.setReadOnly(True)
+        self.chat=QTextEdit(); self.chat.setReadOnly(True); self.chat.document().setMaximumBlockCount(500)
         self.chat.append("JARVIS / Online. Local AI, memory, PC tools, security inspection and optional screen vision are available. No API key is required.")
         split.addWidget(self.chat,3)
         panel=QFrame(); panel.setObjectName("panel"); p=QVBoxLayout(panel)
@@ -165,7 +165,7 @@ class MainWindow(QMainWindow):
         row4.addWidget(self.button("CHECK REGISTERED ANTIVIRUS",lambda:self.run_report("Antivirus inventory",download_guard.antivirus_inventory)))
         row4.addWidget(self.button("DOWNLOAD GUARD STATUS",lambda:self.run_report("Download guard",download_guard.monitor_status)))
         layout.addLayout(row4)
-        self.security_log=QTextEdit(); self.security_log.setReadOnly(True)
+        self.security_log=QTextEdit(); self.security_log.setReadOnly(True); self.security_log.document().setMaximumBlockCount(500)
         self.security_log.setPlaceholderText("Security inspection results appear here. Review indicators carefully; they are not automatic malware verdicts.")
         layout.addWidget(self.security_log,1)
         note=QLabel("Download Guard watches Downloads for new installers, executables, scripts and shortcuts and alerts you. Actual pre-execution blocking and quarantine must be provided by an installed third-party antivirus with real-time protection enabled. JARVIS does not claim to block files itself.")
@@ -180,7 +180,7 @@ class MainWindow(QMainWindow):
         row.addWidget(self.button("REFRESH ROUTINES",self.refresh_routines))
         row.addWidget(self.button("OPEN TASK SCHEDULER",lambda:self.run_report("Task Scheduler",lambda:actions.open_target("task scheduler"))))
         layout.addLayout(row)
-        self.routines=QTextEdit(); self.routines.setReadOnly(True); layout.addWidget(self.routines,1)
+        self.routines=QTextEdit(); self.routines.setReadOnly(True); self.routines.document().setMaximumBlockCount(300); layout.addWidget(self.routines,1)
         warning=QLabel("Saved routines are disabled by default. JARVIS will not silently schedule or run actions in the background.")
         warning.setObjectName("muted"); layout.addWidget(warning)
         self.refresh_routines(); self.tabs.addTab(page,"AUTOMATION")
@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
         row.addWidget(self.button("REFRESH MEMORY",self.refresh_memory))
         row.addWidget(self.button("CLEAR ALL MEMORY",self.clear_memory))
         layout.addLayout(row)
-        self.memories=QTextEdit(); self.memories.setReadOnly(True); layout.addWidget(self.memories,1)
+        self.memories=QTextEdit(); self.memories.setReadOnly(True); self.memories.document().setMaximumBlockCount(500); layout.addWidget(self.memories,1)
         note=QLabel("Memory is saved in your Windows AppData folder. It is not uploaded to a JARVIS cloud service.")
         note.setObjectName("muted"); layout.addWidget(note)
         self.refresh_memory(); self.tabs.addTab(page,"MEMORY")
@@ -212,7 +212,7 @@ class MainWindow(QMainWindow):
         vision_row.addWidget(self.button("CAPTURE & ANALYZE SCREEN",self.analyze_screen))
         layout.addLayout(vision_row)
         layout.addWidget(QLabel("Wake-word recognition uses Google's online speech recognition service when enabled. Screen vision uses a separate optional local model download; screenshots stay on this PC."))
-        self.settings_log=QTextEdit(); self.settings_log.setReadOnly(True); layout.addWidget(self.settings_log,1)
+        self.settings_log=QTextEdit(); self.settings_log.setReadOnly(True); self.settings_log.document().setMaximumBlockCount(300); layout.addWidget(self.settings_log,1)
         self.tabs.addTab(page,"SETTINGS")
 
     def poll_downloads(self):
