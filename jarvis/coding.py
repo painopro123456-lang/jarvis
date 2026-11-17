@@ -6,14 +6,19 @@ explicitly allow-listed and require confirmation because build/test scripts exec
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
+from datetime import datetime
 from pathlib import Path
 
 MAX_READ_BYTES = 160_000
 MAX_WRITE_BYTES = 1_000_000
 MAX_TREE_ENTRIES = 300
-IGNORED_DIRS = {".git", ".venv", "venv", "__pycache__", "node_modules", "target", "dist", "build", ".idea", ".vscode"}
+IGNORED_DIRS = {".git", ".venv", "venv", "__pycache__", "node_modules", "target", "dist", "build", ".idea", ".vscode", ".jarvis-backups"}
+BLOCKED_DIRS = {".git", ".ssh", ".gnupg", ".aws", ".azure", ".kube"}
+BLOCKED_NAMES = {"id_rsa", "id_ed25519", "known_hosts", "credentials", "secrets.json", ".npmrc", ".pypirc"}
 
 def workspace_root() -> Path:
     configured = os.environ.get("JARVIS_WORKSPACE")
@@ -36,8 +41,14 @@ def _file_path(project: str, relative_path: str) -> Path:
     candidate = (base / relative_path).resolve()
     if candidate != base and base not in candidate.parents:
         raise ValueError("That file path escapes the selected project.")
-    if candidate.is_symlink():
-        raise ValueError("Symbolic-link file access is not allowed.")
+    relative_parts = Path(relative_path).parts
+    if any(part.casefold() in BLOCKED_DIRS for part in relative_parts):
+        raise ValueError("JARVIS will not access credential stores or version-control internals.")
+    name = candidate.name.casefold()
+    if name in BLOCKED_NAMES or (name.startswith(".env") and name not in {".env.example", ".env.sample", ".env.template"}):
+        raise ValueError("JARVIS will not read or overwrite secret environment or credential files.")
+    if candidate.suffix.casefold() in {".pem", ".key", ".p12", ".pfx"}:
+        raise ValueError("JARVIS will not access private-key or certificate files.")
     return candidate
 
 def list_projects() -> str:
@@ -95,9 +106,33 @@ def write_file(project: str, relative_path: str, content: str) -> str:
     path = _file_path(project, relative_path)
     if path.exists() and not path.is_file():
         raise ValueError("The destination exists and is not a regular file.")
+    existed_before = path.exists()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8", newline="\n")
-    return f"Wrote {relative_path} ({path.stat().st_size} bytes). Re-read the file to verify it."
+    backup_note = ""
+    if existed_before:
+        backup_root = _project_path(project) / ".jarvis-backups"
+        backup_name = "__".join(Path(relative_path).parts)
+        backup_path = backup_root / (backup_name + "." + datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".bak")
+        backup_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, backup_path)
+        backup_note = " A timestamped backup was saved in .jarvis-backups."
+    temp_name = None
+    try:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", newline="\n",
+                                         dir=path.parent, prefix=".jarvis-", suffix=".tmp",
+                                         delete=False) as handle:
+            temp_name = handle.name
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_name, path)
+    finally:
+        if temp_name and os.path.exists(temp_name):
+            try:
+                os.unlink(temp_name)
+            except OSError:
+                pass
+    return f"Wrote {relative_path} ({path.stat().st_size} bytes).{backup_note} Re-read the file to verify it."
 
 COMMANDS = {
     "python_tests": ([sys.executable, "-m", "pytest", "-q"], "Run Python test suite"),
@@ -105,7 +140,7 @@ COMMANDS = {
     "cargo_check": (["cargo", "check"], "Run cargo check"),
     "cargo_test": (["cargo", "test"], "Run cargo tests"),
     "cargo_build": (["cargo", "build", "--release"], "Build Rust release"),
-    "npm_test": (["npm", "test", "--", "--run"], "Run npm tests"),
+    "npm_test": (["npm", "test"], "Run npm tests"),
     "npm_build": (["npm", "run", "build"], "Run npm build"),
     "dotnet_test": (["dotnet", "test"], "Run .NET tests"),
     "dotnet_build": (["dotnet", "build"], "Build .NET project"),
