@@ -12,7 +12,7 @@ JARVIS uses [Ollama](https://ollama.com) to run its language model locally. Ther
 - Independent-minded assistant personality: can challenge assumptions, explain reasoning, admit mistakes and revise its view when given better evidence.
 - Multi-step tool use with step-by-step result inspection, bounded retries and explicit success/failure reporting.
 - A local action history view in the Security Center; only minimal action metadata is recorded.
-- A bounded coding workspace: create projects, inspect project structure and manifests, search source files for symbols/errors/TODOs, read/write source files, and run allow-listed Python, Rust, Node.js and .NET checks/builds. Search is read-only and bounded; file edits and project commands require confirmation; results must be inspected and verified.
+- A bounded coding workspace: create projects, inspect project structure and manifests, search source files for symbols/errors/TODOs, read/write source files, run a read-only Python static security audit, and run allow-listed Python, Rust, Node.js and .NET checks/builds. Search and audit are read-only and bounded; file edits and project commands require confirmation; results must be inspected and verified.
 - Private local memory for notes and preferences, with view and clear controls.
 - Proactive system recommendations and a one-click daily PC briefing.
 
