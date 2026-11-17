@@ -52,6 +52,27 @@ class CodingWorkspaceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             coding._file_path("demo", "linked.txt")
 
+    def test_project_inspection_does_not_follow_manifest_symlink(self):
+        outside = Path(self.temp.name) / "outside-readme.md"
+        outside.write_text("PRIVATE OUTSIDE CONTENT", encoding="utf-8")
+        link = self.project / "README.md"
+        try:
+            link.symlink_to(outside)
+        except (OSError, NotImplementedError):
+            self.skipTest("Symlink creation is not available in this environment.")
+        result = coding.inspect_project("demo")
+        self.assertNotIn("PRIVATE OUTSIDE CONTENT", result)
+
+    def test_python_check_falls_back_when_pytest_is_missing(self):
+        from types import SimpleNamespace
+        with patch("importlib.util.find_spec", return_value=None), \
+             patch("jarvis.coding.subprocess.run", return_value=SimpleNamespace(
+                 stdout="Ran 0 tests in 0.000s", stderr="", returncode=0
+             )) as run:
+            result = coding.run_check("demo", "python_tests")
+        self.assertIn("NO TESTS FOUND", result)
+        self.assertIn("unittest", run.call_args.args[0])
+
     def test_diff_preview_does_not_modify_file(self):
         source = self.project / "main.py"
         source.write_text("print('old')\\n", encoding="utf-8")
