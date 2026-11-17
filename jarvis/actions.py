@@ -14,7 +14,7 @@ import psutil
 APP_ALIASES = {
     "notepad": "notepad.exe", "calculator": "calc.exe", "paint": "mspaint.exe",
     "task manager": "taskmgr.exe", "file explorer": "explorer.exe",
-    "settings": "ms-settings:", "task scheduler": "taskschd.msc", "resource monitor": "resmon.exe", "services": "services.msc", "windows security": "windowsdefender:",
+    "settings": "ms-settings:", "task scheduler": "taskschd.msc", "resource monitor": "resmon.exe", "services": "services.msc", "windows security": "ms-settings:windowsdefender",
 }
 APPROVED_WINGET_APPS = {\n    "7zip": "7zip.7zip", "vlc": "VideoLAN.VLC", "notepad++": "Notepad++.Notepad++",\n    "firefox": "Mozilla.Firefox", "google chrome": "Google.Chrome", "obs": "OBSProject.OBSStudio",\n    "discord": "Discord.Discord", "steam": "Valve.Steam",\n}\n\nPOWER_PLANS = {
     "balanced": "381b4222-f694-41f0-9685-ff5bb260df2e",
