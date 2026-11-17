@@ -1,6 +1,7 @@
 """Local-first JARVIS agent powered by Ollama; no cloud account or API key."""
 from __future__ import annotations
 
+import base64
 import json
 import os
 import shutil
@@ -305,3 +306,34 @@ def respond(message: str, confirm: Callable[[str], bool] | None = None) -> str:
                 "role": "tool", "tool_name": name, "content": str(output)[:6000]
             })
     return "I've reached my safe action limit for this request. Tell me which part you'd like me to continue with."
+
+
+VISION_MODEL = os.getenv("JARVIS_VISION_MODEL", "qwen2.5vl:3b")
+
+def vision_model_installed() -> bool:
+    return VISION_MODEL in installed_models() or VISION_MODEL + ":latest" in installed_models()
+
+def start_vision_download() -> str:
+    if not ollama_installed():
+        return "Install Ollama first."
+    if not start_server():
+        return "Ollama could not start."
+    if vision_model_installed():
+        return f"{VISION_MODEL} is already installed."
+    executable=shutil.which("ollama")
+    flags=getattr(subprocess,"CREATE_NO_WINDOW",0)
+    subprocess.Popen([executable,"pull",VISION_MODEL],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=flags)
+    return f"Downloading optional screen-vision model {VISION_MODEL}. This is a separate, potentially large download."
+
+def analyze_image(image_path: str, question: str="Describe what is visible and help troubleshoot it.") -> str:
+    if not vision_model_installed():
+        return f"Screen vision is not installed. Use ENABLE SCREEN VISION to download {VISION_MODEL} (a separate large model)."
+    with open(image_path,"rb") as image_file:
+        encoded=base64.b64encode(image_file.read()).decode("ascii")
+    result=_request("/api/chat",{
+        "model":VISION_MODEL,
+        "messages":[{"role":"user","content":question[:2000],"images":[encoded]}],
+        "stream":False,
+        "options":{"temperature":0.3,"num_predict":900}
+    },timeout=180)
+    return (result.get("message") or {}).get("content","The vision model returned no description.")
