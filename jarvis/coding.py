@@ -214,7 +214,9 @@ def audit_python_project(project: str) -> str:
     scanned = 0
     syntax_errors = 0
     secret_pattern = re.compile(
-        r"(?i)\b(api[_-]?key|secret|password|token)\b\s*[:=]\s*['\"]([^'\"]{12,})['\"]"
+        r"""(?i)\b(?:[A-Za-z_][A-Za-z0-9_]*_)?"""
+        r"""(?:api[_-]?(?:key|token)|client[_-]?secret|secret|password|token)"""
+        r"""(?:_[A-Za-z0-9_]+)?\b\s*[:=]\s*['"][^'"]{8,}['"]"""
     )
     dangerous_calls = {
         "eval": ("HIGH", "Dynamic eval() executes data as Python code."),
@@ -270,10 +272,15 @@ def audit_python_project(project: str) -> str:
                         findings.append(("HIGH", relative, str(getattr(node, "lineno", 1)),
                                          "subprocess is invoked with shell=True; review for command injection."))
                 if call_name == "yaml.load":
-                    safe_loader = any(keyword.arg == "Loader" for keyword in node.keywords)
+                    loader = next((keyword.value for keyword in node.keywords if keyword.arg == "Loader"), None)
+                    safe_loader = (
+                        isinstance(loader, ast.Name) and loader.id in {"SafeLoader", "CSafeLoader"}
+                    ) or (
+                        isinstance(loader, ast.Attribute) and loader.attr in {"SafeLoader", "CSafeLoader"}
+                    )
                     if not safe_loader:
                         findings.append(("HIGH", relative, str(getattr(node, "lineno", 1)),
-                                         "yaml.load() has no explicit safe Loader; use yaml.safe_load()."))
+                                         "yaml.load() does not use a recognized safe Loader; use yaml.safe_load()."))
             if len(findings) >= 120:
                 break
         if len(findings) >= 120:
