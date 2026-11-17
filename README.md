@@ -24,3 +24,30 @@ Run `build.bat`, or use the **Build Windows EXE** workflow in GitHub Actions. Th
 
 ## Safety
 JARVIS starts without administrator privileges. Operations requiring elevation should use Windows UAC and explicit user approval. Do not grant it unrestricted unattended administrator access. Review any command before confirming it.
+
+
+## Expanded Windows PC controls
+- **ADMIN MODE** button requests elevation through the standard Windows UAC prompt. JARVIS does not silently self-elevate.
+- Live CPU, RAM, drive and battery telemetry plus top memory-consuming processes.
+- Read-only process listing and startup-app inspection.
+- Open allow-listed Windows apps, common folders, and an existing path supplied by the user.
+- Change between Balanced, High performance, and Ultimate performance power plans after confirmation.
+- Close a process by PID only after confirmation; protected/system processes are blocked.
+- Read Microsoft Defender protection status and start a quick scan after confirmation. JARVIS never disables Defender.
+- Lock, restart, or shut down Windows only after confirmation; restart/shutdown are scheduled with a 60-second cancellation window.
+- Search Desktop, Documents, and Downloads for a filename.
+- Unknown text is never passed to PowerShell, CMD, or an arbitrary shell.
+
+### Example commands
+- `PC status`
+- `list processes`
+- `show startup apps`
+- `Defender status`
+- `start Defender scan`
+- `set high performance` / `set balanced power`
+- `close process 1234`
+- `open C:\\Users\\YourName\\Documents`
+- `find file report.pdf`
+- `lock PC`, `restart PC`, `cancel shutdown`
+
+Administrator access is not a magic bypass for Windows security boundaries. UAC, user permissions, Defender, and file ownership continue to apply.
