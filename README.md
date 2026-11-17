@@ -51,3 +51,18 @@ JARVIS starts without administrator privileges. Operations requiring elevation s
 - `lock PC`, `restart PC`, `cancel shutdown`
 
 Administrator access is not a magic bypass for Windows security boundaries. UAC, user permissions, Defender, and file ownership continue to apply.
+
+
+## OpenAI-powered JARVIS brain
+JARVIS can use the OpenAI API for natural-language conversation and tool planning.
+1. Start JARVIS and click **AI SETUP**.
+2. Create an API key in the OpenAI developer dashboard: https://platform.openai.com/api-keys
+3. Paste it into the password-style setup box. JARVIS stores it in Windows Credential Manager; the key is not committed to this repository.
+4. Once connected, describe what you want in normal language. JARVIS can choose from its approved PC tools and ask before supported risky actions.
+
+The default model is `gpt-5.5`. You can override it with the `JARVIS_MODEL` environment variable. OpenAI API usage is billed separately from a ChatGPT subscription; check your API billing and usage limits before using it.
+
+### AI tool permissions
+The first AI-enabled build can read system telemetry, list processes, inspect startup entries, read Defender status, open an app or existing path, start a Defender quick scan, change the power plan, terminate a selected process, lock Windows, schedule restart/shutdown, and cancel a pending power action. Actions that can interrupt work or change system state require a confirmation dialog. The model cannot run arbitrary PowerShell/CMD commands, and it cannot silently disable Defender or delete files.
+
+This is the initial AI operator layer, not unrestricted unattended administrator access. Windows UAC and account permissions still apply.
