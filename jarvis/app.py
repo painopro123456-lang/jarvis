@@ -206,7 +206,7 @@ class MainWindow(QMainWindow):
             if new_files:
                 message="New potentially risky download(s) detected:\\n" + "\\n".join(new_files) + "\\nDo not open them until your antivirus has completed its scan."
                 self.log(self.security_log,"DOWNLOAD GUARD ALERT",message)
-                QMessageBox.warning(self,"JARVIS download warning",message)
+                self.chat.append("JARVIS / Background security notice: " + message.replace("\\n", " · "))
         except Exception as exc:
             self.log(self.security_log,"DOWNLOAD GUARD ERROR",str(exc))
 
