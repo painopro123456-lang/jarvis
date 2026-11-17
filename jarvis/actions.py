@@ -209,6 +209,33 @@ def install_approved_app(name: str, upgrade: bool=False) -> str:
     return f"{'Updated' if upgrade else 'Installed'} {key} using Windows Package Manager."
 
 
+
+def search_software(query: str) -> str:
+    """Search winget catalogue without installing or changing anything."""
+    search = " ".join(str(query).strip().split())
+    if not search or len(search) > 100:
+        raise ValueError("Enter a search phrase between 1 and 100 characters.")
+    if any(ch in search for ch in ("\\r", "\\n", "\\0")):
+        raise ValueError("That search phrase contains invalid characters.")
+    if platform.system() != "Windows":
+        raise RuntimeError("Software discovery is available only on Windows.")
+    winget = shutil.which("winget")
+    if not winget:
+        raise RuntimeError("Windows Package Manager (winget) was not found. Install or update App Installer from Microsoft Store.")
+    args = [winget, "search", "--query", search, "--source", "winget",
+            "--accept-source-agreements", "--disable-interactivity"]
+    result = subprocess.run(args, capture_output=True, text=True, timeout=90, shell=False)
+    output = (result.stdout or "").strip()
+    if result.returncode:
+        details = (result.stderr or output).strip()[-1200:]
+        raise RuntimeError(details or "The Windows Package Manager catalogue search failed.")
+    if not output:
+        return f"No catalogue matches found for: {search}"
+    return ("Read-only Windows Package Manager search results for "
+            + repr(search) + ". These are candidates, not endorsements; compare publisher and app purpose before choosing.\n"
+            + output[-4500:])
+
+
 def manage_software(name: str, upgrade: bool = False) -> str:
     """Install/update a specifically named app via winget, without a hard-coded app allow-list."""
     app_name = " ".join(str(name).strip().split())
