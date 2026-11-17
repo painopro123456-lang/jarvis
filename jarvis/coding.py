@@ -168,7 +168,7 @@ def preview_file_change(project: str, relative_path: str, content: str) -> str:
 
 COMMANDS = {
     "python_tests": ([sys.executable, "-m", "pytest", "-q"], "Run Python test suite"),
-    "python_compile": ([sys.executable, "-m", "compileall", "-q", "-x", r"(^|[\\/])(\\.git|\\.venv|venv|node_modules|target|dist|build|\\.jarvis-backups)([\\/]|$)", "."], "Compile-check Python files"),
+    "python_compile": ([sys.executable, "-m", "compileall", "-q", "-x", r"(^|[\\/])(\.git|\.venv|venv|node_modules|target|dist|build|\.jarvis-backups)([\\/]|$)", "."], "Compile-check Python files"),
     "cargo_check": (["cargo", "check"], "Run cargo check"),
     "cargo_test": (["cargo", "test"], "Run cargo tests"),
     "cargo_build": (["cargo", "build", "--release"], "Build Rust release"),
