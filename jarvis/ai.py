@@ -232,7 +232,7 @@ def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> st
     if name == "get_defender_status":
         return actions.defender_status()
     if name == "open_app_or_path":
-        return actions.open_target(str(args["target"])[:500])
+        return actions.open_target(str(args["target"])[:500], confirm=confirm)
     if name == "start_defender_quick_scan":
         if not confirm or not confirm("Start a Microsoft Defender quick scan?"):
             return "User cancelled the scan."
