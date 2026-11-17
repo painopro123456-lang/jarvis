@@ -1,14 +1,35 @@
 # JARVIS for Windows
 
-A local-first Windows desktop assistant foundation with a voice-ready interface, live PC telemetry, safe system actions, and Microsoft Defender integration.
+A local-first Windows desktop assistant with an AI personality, voice output, PC telemetry, safe system actions and Microsoft Defender integration.
 
-## What is in this first build
-- Windows desktop dashboard with CPU, memory, disk, battery and process information.
-- Text commands for opening applications and folders, reading system status, and starting Microsoft Defender scans.
-- Text-to-speech responses (Windows voice through `pyttsx3`).
-- Optional microphone input through SpeechRecognition + PyAudio (install the optional audio dependency separately if your PC supports it).
-- Safety gates: destructive/system-wide changes are not executed silently. Defender is never disabled.
-- PyInstaller packaging and GitHub Actions Windows EXE build.
+## Local AI — no API key, no cloud account
+
+JARVIS uses [Ollama](https://ollama.com) to run an open-weight language model on the user's own PC. No OpenAI key, cloud subscription or per-message fee is required.
+
+### First-time setup
+1. Download and install the free Windows runtime from [ollama.com/download/windows](https://ollama.com/download/windows).
+2. Open JARVIS and click **SET UP LOCAL AI**.
+3. JARVIS selects a model based on available system RAM and downloads it once. Default choices: Qwen 3.5 0.8B (under 8 GB RAM), 2B (8–15 GB), or 4B (16 GB+).
+4. Once downloaded, JARVIS chats with the model through Ollama on `127.0.0.1`. Conversations and inference stay on the PC.
+
+The first model download requires internet and storage (model sizes vary). After the model is downloaded, ordinary conversations work offline. Local speed and reasoning quality depend on the PC's CPU, RAM and GPU. A small model on an older laptop will be less capable and slower than a large cloud model; JARVIS does not pretend otherwise.
+
+## Personality and reasoning
+JARVIS is instructed not to agree automatically. It should respectfully challenge incorrect claims, explain its reasoning, distinguish facts from estimates, admit mistakes when corrected, and use a composed, concise conversational style.
+
+## Current Windows capabilities
+- Live CPU, RAM, drive and battery telemetry plus top memory-consuming processes.
+- Read-only process listing and startup-app inspection.
+- Open allow-listed Windows apps, common folders and existing paths.
+- Change between Balanced, High performance and Ultimate performance power plans after confirmation.
+- Close a process by PID only after confirmation; protected/system processes are blocked.
+- Read Microsoft Defender protection status and start a quick scan after confirmation. JARVIS never disables Defender.
+- Lock, restart or shut down Windows only after confirmation; restart/shutdown have a 60-second cancellation window.
+- Search Desktop, Documents and Downloads for a filename.
+- AI tool calling is restricted to the approved local tool list. Unknown model output is never passed to CMD or PowerShell.
+
+## Voice
+JARVIS currently speaks using the installed Windows speech engine. Optional microphone input is provided through SpeechRecognition and Google recognition, which requires internet. See `requirements-voice.txt` for optional dependencies. Fully offline speech recognition is a planned improvement.
 
 ## Run from source
 1. Install Python 3.11 on Windows.
@@ -17,52 +38,8 @@ A local-first Windows desktop assistant foundation with a voice-ready interface,
 4. `pip install -r requirements.txt`
 5. `py -m jarvis`
 
-Optional microphone support: `pip install -r requirements-voice.txt`. Speech recognition currently uses the configured SpeechRecognition engine and therefore needs an internet connection for Google recognition. The app remains fully usable by typing if voice input is unavailable.
-
 ## Build
 Run `build.bat`, or use the **Build Windows EXE** workflow in GitHub Actions. The artifact is a portable `JARVIS.exe` (not an installer yet).
 
 ## Safety
-JARVIS starts without administrator privileges. Operations requiring elevation should use Windows UAC and explicit user approval. Do not grant it unrestricted unattended administrator access. Review any command before confirming it.
-
-
-## Expanded Windows PC controls
-- **ADMIN MODE** button requests elevation through the standard Windows UAC prompt. JARVIS does not silently self-elevate.
-- Live CPU, RAM, drive and battery telemetry plus top memory-consuming processes.
-- Read-only process listing and startup-app inspection.
-- Open allow-listed Windows apps, common folders, and an existing path supplied by the user.
-- Change between Balanced, High performance, and Ultimate performance power plans after confirmation.
-- Close a process by PID only after confirmation; protected/system processes are blocked.
-- Read Microsoft Defender protection status and start a quick scan after confirmation. JARVIS never disables Defender.
-- Lock, restart, or shut down Windows only after confirmation; restart/shutdown are scheduled with a 60-second cancellation window.
-- Search Desktop, Documents, and Downloads for a filename.
-- Unknown text is never passed to PowerShell, CMD, or an arbitrary shell.
-
-### Example commands
-- `PC status`
-- `list processes`
-- `show startup apps`
-- `Defender status`
-- `start Defender scan`
-- `set high performance` / `set balanced power`
-- `close process 1234`
-- `open C:\\Users\\YourName\\Documents`
-- `find file report.pdf`
-- `lock PC`, `restart PC`, `cancel shutdown`
-
-Administrator access is not a magic bypass for Windows security boundaries. UAC, user permissions, Defender, and file ownership continue to apply.
-
-
-## OpenAI-powered JARVIS brain
-JARVIS can use the OpenAI API for natural-language conversation and tool planning.
-1. Start JARVIS and click **AI SETUP**.
-2. Create an API key in the OpenAI developer dashboard: https://platform.openai.com/api-keys
-3. Paste it into the password-style setup box. JARVIS stores it in Windows Credential Manager; the key is not committed to this repository.
-4. Once connected, describe what you want in normal language. JARVIS can choose from its approved PC tools and ask before supported risky actions.
-
-The default model is `gpt-5.5`. You can override it with the `JARVIS_MODEL` environment variable. OpenAI API usage is billed separately from a ChatGPT subscription; check your API billing and usage limits before using it.
-
-### AI tool permissions
-The first AI-enabled build can read system telemetry, list processes, inspect startup entries, read Defender status, open an app or existing path, start a Defender quick scan, change the power plan, terminate a selected process, lock Windows, schedule restart/shutdown, and cancel a pending power action. Actions that can interrupt work or change system state require a confirmation dialog. The model cannot run arbitrary PowerShell/CMD commands, and it cannot silently disable Defender or delete files.
-
-This is the initial AI operator layer, not unrestricted unattended administrator access. Windows UAC and account permissions still apply.
+JARVIS starts without administrator privileges. Operations requiring elevation should use Windows UAC and explicit user approval. Do not grant it unrestricted unattended administrator access. Defender is never disabled and user files are not silently deleted.
