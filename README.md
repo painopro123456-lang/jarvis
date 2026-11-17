@@ -71,3 +71,7 @@ The GitHub Actions workflow builds a **single standalone `JARVIS.exe`** and publ
 [Download JARVIS.exe](https://github.com/painopro123456-lang/jarvis/releases/latest/download/JARVIS.exe)
 
 This is a portable executable, not an installer. Windows may show SmartScreen because the build is not code-signed.
+
+### Third-party antivirus and Download Guard
+
+The Security Center can list antivirus products registered with Windows Security Center and watches the current user's Downloads folder for newly arriving executable, installer, script, shortcut, disk-image and Java archive file types. New arrivals trigger an on-screen warning. This is an alerting companion only: it does not intercept browser traffic, block process execution, scan or quarantine files, and it cannot prove an antivirus engine is active. Real-time prevention and quarantine must be provided by a reputable installed third-party endpoint product with its own tamper protection enabled. JARVIS never claims that a file is safe merely because it is signed or that no alert means the system is clean.
