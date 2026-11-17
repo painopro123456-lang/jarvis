@@ -17,7 +17,7 @@ MAX_READ_BYTES = 160_000
 MAX_WRITE_BYTES = 1_000_000
 MAX_TREE_ENTRIES = 300
 IGNORED_DIRS = {".git", ".venv", "venv", "__pycache__", "node_modules", "target", "dist", "build", ".idea", ".vscode", ".jarvis-backups"}
-BLOCKED_DIRS = {".git", ".ssh", ".gnupg", ".aws", ".azure", ".kube"}
+BLOCKED_DIRS = {".git", ".ssh", ".gnupg", ".aws", ".azure", ".kube", ".jarvis-backups"}
 BLOCKED_NAMES = {"id_rsa", "id_ed25519", "known_hosts", "credentials", "secrets.json", ".npmrc", ".pypirc"}
 
 def workspace_root() -> Path:
@@ -38,12 +38,20 @@ def _project_path(project: str = ".") -> Path:
 
 def _file_path(project: str, relative_path: str) -> Path:
     base = _project_path(project)
-    candidate = (base / relative_path).resolve()
+    relative = Path(relative_path)
+    if relative.is_absolute() or not relative_path or "\\0" in relative_path:
+        raise ValueError("Use a non-empty relative project file path.")
+    if any(part.casefold() in BLOCKED_DIRS for part in relative.parts):
+        raise ValueError("JARVIS will not access credential stores, backups or version-control internals.")
+    lexical = base / relative
+    cursor = base
+    for part in relative.parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise ValueError("Symbolic-link paths are not allowed in the coding workspace.")
+    candidate = lexical.resolve()
     if candidate != base and base not in candidate.parents:
         raise ValueError("That file path escapes the selected project.")
-    relative_parts = Path(relative_path).parts
-    if any(part.casefold() in BLOCKED_DIRS for part in relative_parts):
-        raise ValueError("JARVIS will not access credential stores or version-control internals.")
     name = candidate.name.casefold()
     if name in BLOCKED_NAMES or (name.startswith(".env") and name not in {".env.example", ".env.sample", ".env.template"}):
         raise ValueError("JARVIS will not read or overwrite secret environment or credential files.")
