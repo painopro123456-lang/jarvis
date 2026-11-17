@@ -40,7 +40,7 @@ def _project_path(project: str = ".") -> Path:
 def _file_path(project: str, relative_path: str) -> Path:
     base = _project_path(project)
     relative = Path(relative_path)
-    if relative.is_absolute() or not relative_path or "\\0" in relative_path:
+    if relative.is_absolute() or not relative_path or chr(0) in relative_path:
         raise ValueError("Use a non-empty relative project file path.")
     if any(part.casefold() in BLOCKED_DIRS for part in relative.parts):
         raise ValueError("JARVIS will not access credential stores, backups or version-control internals.")
