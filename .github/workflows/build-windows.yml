@@ -26,11 +26,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
-      - name: Build portable EXE
-        run: pyinstaller --noconfirm --clean --windowed --name JARVIS --paths . --collect-all PySide6 --collect-all pyttsx3 jarvis/__main__.py
-      - name: Upload EXE
+      - name: Build single-file Windows EXE
+        run: pyinstaller --noconfirm --clean --onefile --windowed --name JARVIS --paths . --collect-all PySide6 --collect-all pyttsx3 jarvis/__main__.py
+      - name: Upload single EXE
         uses: actions/upload-artifact@v4
         with:
-          name: JARVIS-Windows-x64
-          path: dist/JARVIS/
+          name: JARVIS-Windows-x64-EXE
+          path: dist/JARVIS.exe
           if-no-files-found: error
