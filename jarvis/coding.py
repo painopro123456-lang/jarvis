@@ -212,6 +212,9 @@ def audit_python_project(project: str) -> str:
     base = _project_path(project)
     findings: list[tuple[str, str, str, str]] = []
     scanned = 0
+    considered = 0
+    skipped_large = 0
+    truncated = False
     syntax_errors = 0
     secret_pattern = re.compile(
         r"""(?i)\b(?:[A-Za-z_][A-Za-z0-9_]*_)?"""
@@ -232,10 +235,17 @@ def audit_python_project(project: str) -> str:
             candidate = Path(current) / name
             if candidate.suffix.casefold() != ".py" or candidate.is_symlink():
                 continue
+            considered += 1
+            if considered > 2000:
+                truncated = True
+                break
             relative = candidate.relative_to(base).as_posix()
             try:
                 safe_path = _file_path(project, relative)
-                if not safe_path.is_file() or safe_path.stat().st_size > MAX_READ_BYTES:
+                if not safe_path.is_file():
+                    continue
+                if safe_path.stat().st_size > MAX_READ_BYTES:
+                    skipped_large += 1
                     continue
                 source = safe_path.read_text(encoding="utf-8")
             except (OSError, UnicodeError, ValueError):
@@ -283,16 +293,19 @@ def audit_python_project(project: str) -> str:
                                          "yaml.load() does not use a recognized safe Loader; use yaml.safe_load()."))
             if len(findings) >= 120:
                 break
-        if len(findings) >= 120:
+        if truncated or len(findings) >= 120:
             break
 
+    scope_note = f" Skipped {skipped_large} files larger than {MAX_READ_BYTES} bytes." if skipped_large else ""
+    if truncated:
+        scope_note += " Stopped after 2,000 Python files; the remaining project was not audited."
     if not findings:
-        return (f"Python static audit complete: scanned {scanned} files; no configured checks triggered. "
-                "This is not proof the project is secure; no code was executed.")
+        return (f"Python static audit complete: scanned {scanned} files; no configured checks triggered."
+                f"{scope_note} This is not proof the project is secure; no code was executed.")
     order = {"ERROR": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
     findings.sort(key=lambda item: (order.get(item[0], 9), item[1], int(item[2]) if item[2].isdigit() else 0))
     lines = [f"Python static audit: scanned {scanned} files; {syntax_errors} syntax errors; "
-             f"{len(findings)} findings (capped at 120)."]
+             f"{len(findings)} findings (capped at 120).{scope_note}"]
     lines.extend(f"[{severity}] {path}:{line} — {message}"
                  for severity, path, line, message in findings[:120])
     lines.append("Read-only heuristic audit: findings need human review; absence of findings is not a security guarantee.")
