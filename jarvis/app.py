@@ -5,12 +5,12 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QMessageBox, QPushButton, QProgressBar, QTextEdit, QVBoxLayout, QWidget
+    QMainWindow, QMessageBox, QPushButton, QProgressBar, QTextEdit, QVBoxLayout, QWidget, QInputDialog
 )
 from jarvis.assistant import respond
 from jarvis.system_monitor import snapshot
 from jarvis.voice import Voice
-from jarvis import actions
+from jarvis import actions, ai
 
 
 class Metric(QFrame):
@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
         self.chat = QTextEdit()
         self.chat.setReadOnly(True)
         self.chat.setPlaceholderText("Your JARVIS conversation will appear here.")
-        self.chat.append("JARVIS  /  Online. Ask for a PC status report, open an app, or start a Defender scan.")
+        self.chat.append("JARVIS  /  Online. Configure AI SETUP for natural conversation and multi-step PC tasks. Basic commands work without an API key.")
         self.chat.setMinimumHeight(300)
         mid.addWidget(self.chat, 3)
         side = QFrame()
@@ -100,8 +100,11 @@ class MainWindow(QMainWindow):
         mic.clicked.connect(self.listen)
         self.admin = QPushButton("ADMIN MODE")
         self.admin.clicked.connect(self.enable_admin)
+        self.ai_setup = QPushButton("AI SETUP")
+        self.ai_setup.clicked.connect(self.configure_ai)
         controls.addWidget(self.entry, 1)
         controls.addWidget(mic)
+        controls.addWidget(self.ai_setup)
         controls.addWidget(self.admin)
         controls.addWidget(send)
         outer.addLayout(controls)
@@ -130,6 +133,28 @@ class MainWindow(QMainWindow):
         self.timer.start(2500)
         self.refresh()
         self.update_admin_status()
+        self.update_ai_status()
+
+    def update_ai_status(self):
+        self.ai_setup.setText("AI CONNECTED" if ai.has_api_key() else "AI SETUP")
+
+    def configure_ai(self):
+        key, accepted = QInputDialog.getText(
+            self, "Connect JARVIS AI",
+            "Paste your OpenAI API key. It is saved in Windows Credential Manager, not in the GitHub repository.",
+            QLineEdit.Password
+        )
+        if not accepted or not key.strip():
+            return
+        try:
+            ai.save_api_key(key)
+            self.update_ai_status()
+            QMessageBox.information(
+                self, "JARVIS AI connected",
+                "The API key was saved securely. JARVIS can now understand natural-language requests and choose from its approved PC tools. API usage is billed separately by OpenAI."
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Could not save API key", str(exc))
 
     def confirm(self, prompt: str) -> bool:
         return QMessageBox.question(self, "JARVIS confirmation", prompt,
