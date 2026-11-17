@@ -117,6 +117,11 @@ class MainWindow(QMainWindow):
         row2.addWidget(self.button("RUST DRIVER AUDIT",lambda:self.run_report("Driver audit",native_core.driver_audit)))
         row2.addWidget(self.button("ACTION HISTORY",lambda:self.run_report("Action history",activity.report)))
         layout.addLayout(row2)
+        row3=QHBoxLayout()
+        row3.addWidget(self.button("DEFENDER DEEP HEALTH CHECK",lambda:self.run_report("Defender health",security.defender_health_report)))
+        row3.addWidget(self.button("DEFENDER THREAT HISTORY",lambda:self.run_report("Defender threat history",security.threat_history)))
+        row3.addWidget(self.button("CHECK FILE SIGNATURE + HASH",self.inspect_file_trust_ui))
+        layout.addLayout(row3)
         self.security_log=QTextEdit(); self.security_log.setReadOnly(True)
         self.security_log.setPlaceholderText("Security inspection results appear here. Review indicators carefully; they are not automatic malware verdicts.")
         layout.addWidget(self.security_log,1)
@@ -224,6 +229,10 @@ class MainWindow(QMainWindow):
         path,_=QFileDialog.getOpenFileName(self,"Choose a file to scan")
         if path and self.confirm(f"Ask Microsoft Defender to scan this file?\n{path}"):
             self.run_report("Defender custom scan",lambda:security.scan_file(path))
+    def inspect_file_trust_ui(self):
+        path,_=QFileDialog.getOpenFileName(self,"Inspect file signature and SHA-256")
+        if path:
+            self.run_report("File trust inspection",lambda:security.inspect_file_trust(path))
     def restore_point(self):
         if self.confirm("Create a Windows restore point? This requires administrator mode and may take a minute."):
             self.run_report("Restore point",security.create_restore_point)
