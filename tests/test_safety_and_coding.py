@@ -84,6 +84,21 @@ class DownloadMonitorTests(unittest.TestCase):
                 self.assertEqual(monitor.poll(), ["installer.exe (5 bytes)"])
                 self.assertEqual(monitor.poll(), [])  # Never alerts twice.
 
+    def test_realerts_when_a_download_is_replaced_with_same_name(self):
+        with tempfile.TemporaryDirectory() as folder:
+            monitor = download_guard.DownloadMonitor()
+            monitor.folder = Path(folder)
+            file = Path(folder) / "installer.exe"
+            with patch("jarvis.download_guard.platform.system", return_value="Windows"):
+                file.write_bytes(b"old")
+                self.assertEqual(monitor.poll(), [])  # Existing file baseline.
+                file.unlink()
+                self.assertEqual(monitor.poll(), [])  # Forget removed file.
+                file.write_bytes(b"new payload")
+                self.assertEqual(monitor.poll(), [])  # New file sighting.
+                self.assertEqual(monitor.poll(), [])  # First stable poll.
+                self.assertEqual(monitor.poll(), ["installer.exe (11 bytes)"])
+
     def test_does_not_alert_for_file_that_keeps_growing(self):
         with tempfile.TemporaryDirectory() as folder:
             monitor = download_guard.DownloadMonitor()
