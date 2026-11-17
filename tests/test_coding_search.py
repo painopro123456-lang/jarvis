@@ -36,6 +36,23 @@ class ProjectSearchTests(unittest.TestCase):
         self.assertIn("No matches found", result)
         self.assertNotIn("API_SECRET", result)
 
+    def test_static_audit_reports_unsafe_calls_without_executing_them(self):
+        (self.project / "unsafe.py").write_text("value = eval('1 + 1')\\n", encoding="utf-8")
+        result = coding.audit_python_project("demo")
+        self.assertIn("[HIGH]", result)
+        self.assertIn("eval()", result)
+
+    def test_static_audit_masks_possible_secret_values(self):
+        (self.project / "config.py").write_text('API_TOKEN = "super-secret-value-12345"\\n', encoding="utf-8")
+        result = coding.audit_python_project("demo")
+        self.assertIn("Possible hard-coded credential", result)
+        self.assertNotIn("super-secret-value-12345", result)
+
+    def test_static_audit_reports_syntax_errors(self):
+        (self.project / "broken.py").write_text("def broken(:\\n", encoding="utf-8")
+        result = coding.audit_python_project("demo")
+        self.assertIn("Python syntax error", result)
+
     def test_rejects_empty_query(self):
         with self.assertRaises(ValueError):
             coding.search_project("demo", "   ")
