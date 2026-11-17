@@ -214,7 +214,7 @@ def audit_python_project(project: str) -> str:
     scanned = 0
     syntax_errors = 0
     secret_pattern = re.compile(
-        r"(?i)\\b(api[_-]?key|secret|password|token)\\b\\s*[:=]\\s*['\"]([^'\"]{12,})['\"]"
+        r"(?i)\b(api[_-]?key|secret|password|token)\b\s*[:=]\s*['\"]([^'\"]{12,})['\"]"
     )
     dangerous_calls = {
         "eval": ("HIGH", "Dynamic eval() executes data as Python code."),
@@ -289,7 +289,7 @@ def audit_python_project(project: str) -> str:
     lines.extend(f"[{severity}] {path}:{line} — {message}"
                  for severity, path, line, message in findings[:120])
     lines.append("Read-only heuristic audit: findings need human review; absence of findings is not a security guarantee.")
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 
 COMMANDS = {
