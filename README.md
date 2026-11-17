@@ -1,35 +1,46 @@
 # JARVIS for Windows
 
-A local-first Windows desktop assistant with an AI personality, voice output, PC telemetry, safe system actions and Microsoft Defender integration.
+A local-first Windows desktop assistant with a conversational local AI, voice controls, PC telemetry, memory, security inspection, troubleshooting and guarded automation.
 
-## Local AI — no API key, no cloud account
+## No API key required
 
-JARVIS uses [Ollama](https://ollama.com) to run an open-weight language model on the user's own PC. No OpenAI key, cloud subscription or per-message fee is required.
+JARVIS uses [Ollama](https://ollama.com) to run its language model locally. There is no OpenAI API key, cloud subscription or per-message fee. Install Ollama from [ollama.com/download/windows](https://ollama.com/download/windows), open JARVIS and choose **SET UP LOCAL AI**. The model is a one-time download; after setup, ordinary AI conversations run on the PC. Model speed and reasoning quality depend on available CPU, RAM and GPU.
 
-### First-time setup
-1. Download and install the free Windows runtime from [ollama.com/download/windows](https://ollama.com/download/windows).
-2. Open JARVIS and click **SET UP LOCAL AI**.
-3. JARVIS selects a model based on available system RAM and downloads it once. Default choices: Qwen 3.5 0.8B (under 8 GB RAM), 2B (8–15 GB), or 4B (16 GB+).
-4. Once downloaded, JARVIS chats with the model through Ollama on `127.0.0.1`. Conversations and inference stay on the PC.
+## Features
 
-The first model download requires internet and storage (model sizes vary). After the model is downloaded, ordinary conversations work offline. Local speed and reasoning quality depend on the PC's CPU, RAM and GPU. A small model on an older laptop will be less capable and slower than a large cloud model; JARVIS does not pretend otherwise.
+### Intelligence
+- Independent-minded assistant personality: can challenge assumptions, explain reasoning, admit mistakes and revise its view when given better evidence.
+- Multi-step planning and allow-listed local PC tool calling.
+- Private local memory for notes and preferences, with view and clear controls.
+- Proactive system recommendations and a one-click daily PC briefing.
 
-## Personality and reasoning
-JARVIS is instructed not to agree automatically. It should respectfully challenge incorrect claims, explain its reasoning, distinguish facts from estimates, admit mistakes when corrected, and use a composed, concise conversational style.
+### PC operator
+- Live CPU, RAM, disk, battery and top-process monitoring.
+- Process and startup-app inspection.
+- Open common Windows apps, folders and existing paths.
+- Change supported power plans after confirmation.
+- Find files and detect duplicates in Desktop, Documents and Downloads. Duplicate detection is read-only; it never deletes files.
+- Install/update only a small approved list of applications through Windows Package Manager (winget), after confirmation.
+- Read-only diagnostics including recent critical/error System events.
+- Create a Windows restore point before a major change (requires administrator mode and confirmation).
 
-## Current Windows capabilities
-- Live CPU, RAM, drive and battery telemetry plus top memory-consuming processes.
-- Read-only process listing and startup-app inspection.
-- Open allow-listed Windows apps, common folders and existing paths.
-- Change between Balanced, High performance and Ultimate performance power plans after confirmation.
-- Close a process by PID only after confirmation; protected/system processes are blocked.
-- Read Microsoft Defender protection status and start a quick scan after confirmation. JARVIS never disables Defender.
-- Lock, restart or shut down Windows only after confirmation; restart/shutdown have a 60-second cancellation window.
-- Search Desktop, Documents and Downloads for a filename.
-- AI tool calling is restricted to the approved local tool list. Unknown model output is never passed to CMD or PowerShell.
+### Security center
+- Read Microsoft Defender and Windows Firewall status.
+- Inspect visible network connections, process indicators and startup entries.
+- Ask Microsoft Defender to scan a selected file or run a quick scan.
+- JARVIS does not disable Defender or Windows Firewall. Process and network indicators are review leads, not proof of malware. Defender handles its own quarantine workflow.
 
-## Voice
-JARVIS currently speaks using the installed Windows speech engine. Optional microphone input is provided through SpeechRecognition and Google recognition, which requires internet. See `requirements-voice.txt` for optional dependencies. Fully offline speech recognition is a planned improvement.
+### Voice and vision
+- Windows text-to-speech with calm, standard and energetic rate presets; stop-speaking control.
+- Optional microphone input and wake word. Wake-word recognition uses Google's online speech-recognition service when enabled; it is not an always-on offline recognizer.
+- Optional screen capture and local vision analysis using a separate Ollama vision model. The vision model is a separate, potentially large download and is never downloaded without confirmation. A screenshot is analyzed only after the user requests it and confirms.
+
+### Automation
+- Save named routines for later review. New routines are disabled by default.
+- No silent background task execution or unrestricted shell access. Windows Task Scheduler can be opened by the user for advanced scheduling.
+
+## Safety boundaries
+JARVIS starts without administrator privileges. Risky actions require a confirmation dialog. Its AI can call only explicitly allow-listed functions; model output is never passed directly to arbitrary CMD or PowerShell. User files are not silently deleted. JARVIS is a companion to Windows Security, not a replacement for antivirus software.
 
 ## Run from source
 1. Install Python 3.11 on Windows.
@@ -38,8 +49,11 @@ JARVIS currently speaks using the installed Windows speech engine. Optional micr
 4. `pip install -r requirements.txt`
 5. `py -m jarvis`
 
-## Build
-Run `build.bat`, or use the **Build Windows EXE** workflow in GitHub Actions. The artifact is a portable `JARVIS.exe` (not an installer yet).
+Optional microphone dependencies: `pip install -r requirements-voice.txt`.
 
-## Safety
-JARVIS starts without administrator privileges. Operations requiring elevation should use Windows UAC and explicit user approval. Do not grant it unrestricted unattended administrator access. Defender is never disabled and user files are not silently deleted.
+## Download the Windows app
+The GitHub Actions workflow builds a **single standalone `JARVIS.exe`** and publishes it as a direct GitHub Release asset. No ZIP download is required:
+
+[Download JARVIS.exe](https://github.com/painopro123456-lang/jarvis/releases/latest/download/JARVIS.exe)
+
+This is a portable executable, not an installer. Windows may show SmartScreen because the build is not code-signed.
