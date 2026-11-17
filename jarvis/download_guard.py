@@ -101,6 +101,14 @@ class DownloadMonitor:
         for key in list(self._pending):
             if key not in present:
                 self._pending.pop(key, None)
+        # A deleted download may later be replaced by a different file with the
+        # same name. Forget old state so the replacement is inspected again.
+        for key in list(self._reported):
+            if key not in present:
+                self._reported.discard(key)
+        for key in list(self._known):
+            if key not in present:
+                self._known.discard(key)
         return found
 
 
