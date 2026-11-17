@@ -51,33 +51,57 @@ def antivirus_inventory() -> str:
 
 
 class DownloadMonitor:
-    """Poll the user's Downloads folder and report newly-arrived risky file types."""
+    """Report new risky files only after their size is stable across polls.
+
+    This is notification-only; it is not an execution blocker or antivirus engine.
+    """
     def __init__(self):
         self.folder = Path.home() / "Downloads"
-        self._seen: set[str] = set()
+        self._known: set[str] = set()
+        self._pending: dict[str, tuple[int, int]] = {}
+        self._reported: set[str] = set()
         self._initialized = False
 
     def poll(self) -> list[str]:
         if platform.system() != "Windows" or not self.folder.is_dir():
             return []
-        found = []
-        current = set()
+        found: list[str] = []
+        present: set[str] = set()
         try:
-            for path in self.folder.iterdir():
-                try:
-                    if not path.is_file() or path.suffix.lower() not in RISKY_SUFFIXES:
-                        continue
-                    stat = path.stat()
-                    key = str(path.resolve()).lower()
-                    current.add(key)
-                    if self._initialized and key not in self._seen:
-                        found.append(f"{path.name} ({stat.st_size:,} bytes)")
-                except (OSError, PermissionError):
-                    continue
+            entries = list(self.folder.iterdir())
         except OSError:
             return []
-        self._seen = current
-        self._initialized = True
+        for path in entries:
+            try:
+                if not path.is_file() or path.suffix.lower() not in RISKY_SUFFIXES:
+                    continue
+                stat = path.stat()
+                key = str(path.resolve()).casefold()
+                present.add(key)
+                if not self._initialized or key in self._known or key in self._reported:
+                    continue
+                previous = self._pending.get(key)
+                if previous is None or previous[0] != stat.st_size:
+                    self._pending[key] = (stat.st_size, 0)
+                    continue
+                stable_polls = previous[1] + 1
+                self._pending[key] = (stat.st_size, stable_polls)
+                # Timer runs every five seconds. Two unchanged polls means the
+                # file has been stable for roughly ten seconds.
+                if stable_polls >= 2:
+                    found.append(f"{path.name} ({stat.st_size:,} bytes)")
+                    self._reported.add(key)
+                    self._pending.pop(key, None)
+            except (OSError, PermissionError):
+                continue
+        if not self._initialized:
+            self._known = present
+            self._initialized = True
+            return []
+        self._known.update(present)
+        for key in list(self._pending):
+            if key not in present:
+                self._pending.pop(key, None)
         return found
 
 
