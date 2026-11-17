@@ -24,6 +24,16 @@ APPROVED_WINGET_APPS = {
     "discord": "Discord.Discord", "steam": "Valve.Steam",
 }
 
+EXECUTABLE_SUFFIXES = {
+    ".exe", ".com", ".scr", ".bat", ".cmd", ".ps1", ".psm1", ".vbs",
+    ".vbe", ".js", ".jse", ".wsf", ".wsh", ".hta", ".jar", ".msi",
+    ".msp", ".lnk", ".reg",
+}
+PROTECTED_PROCESS_NAMES = {
+    "system", "registry", "smss.exe", "csrss.exe", "wininit.exe",
+    "winlogon.exe", "services.exe", "lsass.exe", "svchost.exe",
+}
+
 POWER_PLANS = {
     "balanced": "381b4222-f694-41f0-9685-ff5bb260df2e",
     "high performance": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
@@ -95,7 +105,7 @@ def _find_start_menu_app(query: str):
     return [path for score, path in matches[:5] if score >= max(0.78, best - 0.08)]
 
 
-def open_target(target: str) -> str:
+def open_target(target: str, confirm=None) -> str:
     key = target.strip().lower()
     if key in APP_ALIASES:
         value = APP_ALIASES[key]
@@ -115,8 +125,14 @@ def open_target(target: str) -> str:
         return "Opening your default browser."
     path = Path(os.path.expandvars(os.path.expanduser(target.strip().strip('"'))))
     if path.exists():
-        os.startfile(str(path.resolve()))
-        return f"Opening {path}."
+        resolved = path.resolve()
+        if resolved.is_file() and resolved.suffix.casefold() in EXECUTABLE_SUFFIXES:
+            if not confirm or not confirm(
+                f"Run this executable or script?\n{resolved}\nOnly continue if you trust its source."
+            ):
+                return "Opening executable cancelled."
+        os.startfile(str(resolved))
+        return f"Opening {resolved}."
     executable = shutil.which(target.strip())
     if executable:
         subprocess.Popen([executable], shell=False)
@@ -151,10 +167,12 @@ def terminate_process(pid_text: str) -> str:
     if not pid_text.isdigit():
         raise ValueError("Use a numeric process ID (PID), for example: close process 1234.")
     pid = int(pid_text)
-    if pid in (0, 4, os.getpid()):
+    if pid in (0, 1, 4, os.getpid()):
         raise ValueError("That process is protected or is JARVIS itself.")
     proc = psutil.Process(pid)
     name = proc.name()
+    if name.casefold() in PROTECTED_PROCESS_NAMES:
+        raise ValueError(f"JARVIS will not terminate critical Windows process '{name}'.")
     proc.terminate()
     try:
         proc.wait(timeout=3)
