@@ -35,6 +35,20 @@ class AssistantWorker(QThread):
             self.answer.emit(f"I couldn't complete that request: {exc}")
 
 
+class VoiceInputWorker(QThread):
+    transcript = Signal(str)
+
+    def __init__(self, voice):
+        super().__init__()
+        self.voice = voice
+
+    def run(self):
+        try:
+            self.transcript.emit(self.voice.listen_once())
+        except Exception as exc:
+            self.transcript.emit("VOICE ERROR: " + str(exc))
+
+
 class Metric(QFrame):
     def __init__(self,title):
         super().__init__()
@@ -52,6 +66,7 @@ class MainWindow(QMainWindow):
         self.resize(1280,850)
         self.voice=Voice()
         self.download_monitor=download_guard.DownloadMonitor()
+        self.download_monitor.poll()  # Establish baseline before the first timer tick.
         self._wake_queue=queue.Queue()
         root=QWidget(); root.setObjectName("root"); self.setCentralWidget(root)
         outer=QVBoxLayout(root)
@@ -115,7 +130,7 @@ class MainWindow(QMainWindow):
         self.entry=QLineEdit(); self.entry.setPlaceholderText("Ask JARVIS… e.g. optimize my PC, explain this error, remember my preferences")
         self.entry.returnPressed.connect(self.send)
         controls.addWidget(self.entry,1); controls.addWidget(self.button("DAILY BRIEFING",lambda:self.entry.setText("Give me a concise daily PC health and security briefing, including recommended checks." ) or self.send())); controls.addWidget(self.button("SEND",self.send))
-        controls.addWidget(self.button("TALK",self.listen)); controls.addWidget(self.button("STOP SPEAKING",self.voice.stop_speaking))
+        self.talk_button=self.button("TALK",self.listen); controls.addWidget(self.talk_button); controls.addWidget(self.button("STOP SPEAKING",self.voice.stop_speaking))
         self.ai_setup=self.button("SET UP LOCAL AI",self.configure_ai); controls.addWidget(self.ai_setup)
         self.admin=self.button("ADMIN MODE",self.enable_admin); controls.addWidget(self.admin)
         layout.addLayout(controls)
@@ -280,9 +295,27 @@ class MainWindow(QMainWindow):
         self.entry.setFocus()
         self._assistant_worker=None
     def listen(self):
-        self.chat.append("JARVIS / Listening…"); QApplication.processEvents()
-        try: self.entry.setText(self.voice.listen_once()); self.send()
-        except Exception as exc: QMessageBox.information(self,"Voice input",str(exc))
+        current=getattr(self,"_voice_worker",None)
+        if current is not None and current.isRunning():
+            return
+        self.chat.append("JARVIS / Listening…")
+        worker=VoiceInputWorker(self.voice)
+        worker.transcript.connect(self._voice_result)
+        worker.finished.connect(self._voice_finished)
+        self._voice_worker=worker
+        self.talk_button.setEnabled(False)
+        worker.start()
+
+    def _voice_result(self, transcript):
+        if transcript.startswith("VOICE ERROR:"):
+            QMessageBox.information(self,"Voice input",transcript[len("VOICE ERROR:"):].strip())
+            return
+        self.entry.setText(transcript)
+        self.send()
+
+    def _voice_finished(self):
+        self.talk_button.setEnabled(True)
+        self._voice_worker=None
     def find_duplicates(self):
         from jarvis import file_tools
         self.run_report("Duplicate files",file_tools.find_duplicates)
@@ -336,7 +369,8 @@ class MainWindow(QMainWindow):
         except Exception as exc: QMessageBox.warning(self,"Screen vision",str(exc))
     def closeEvent(self,event):
         worker=getattr(self,"_assistant_worker",None)
-        if worker is not None and worker.isRunning():
+        voice_worker=getattr(self,"_voice_worker",None)
+        if (worker is not None and worker.isRunning()) or (voice_worker is not None and voice_worker.isRunning()):
             event.ignore()
             self.chat.append("JARVIS / I'm still completing the current task. Close the window again after I finish.")
             return
