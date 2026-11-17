@@ -54,7 +54,7 @@ class DownloadMonitor:
     """Poll the user's Downloads folder and report newly-arrived risky file types."""
     def __init__(self):
         self.folder = Path.home() / "Downloads"
-        self._seen: set[tuple[str, int, int]] = set()
+        self._seen: set[str] = set()
         self._initialized = False
 
     def poll(self) -> list[str]:
@@ -68,7 +68,7 @@ class DownloadMonitor:
                     if not path.is_file() or path.suffix.lower() not in RISKY_SUFFIXES:
                         continue
                     stat = path.stat()
-                    key = (str(path.resolve()).lower(), stat.st_size, stat.st_mtime_ns)
+                    key = str(path.resolve()).lower()
                     current.add(key)
                     if self._initialized and key not in self._seen:
                         found.append(f"{path.name} ({stat.st_size:,} bytes)")
