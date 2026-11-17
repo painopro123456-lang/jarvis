@@ -159,11 +159,22 @@ TOOLS = [
     _tool("schedule_power_action", "Schedule Windows restart or shutdown after 60 seconds.",
           {"action": {"type": "string", "enum": ["restart", "shutdown"]}}, ["action"]),
     _tool("cancel_power_action", "Cancel a pending Windows shutdown or restart."),
+    _tool("get_firewall_status", "Read Windows Firewall profile status."),
+    _tool("inspect_network_connections", "List visible active remote network connections for review."),
+    _tool("inspect_suspicious_processes", "List process indicators that deserve review; never label them malware without evidence."),
+    _tool("scan_file_with_defender", "Ask Microsoft Defender to scan one existing file.", {"path": {"type": "string"}}, ["path"]),
+    _tool("create_restore_point", "Create a Windows restore point before a major settings change."),
+    _tool("remember_preference", "Save a user preference locally on this PC.", {"key": {"type": "string"}, "value": {"type": "string"}}, ["key", "value"]),
+    _tool("remember_note", "Save a note to private local JARVIS memory.", {"note": {"type": "string"}}, ["note"]),
+    _tool("read_memory", "Read saved local JARVIS memories."),
+    _tool("clear_memory", "Clear all local JARVIS memory. Requires confirmation."),
+    _tool("save_automation_routine", "Save a disabled automation routine for the user to review.", {"name": {"type": "string"}, "instruction": {"type": "string"}}, ["name", "instruction"]),
+    _tool("list_automation_routines", "List saved automation routines."),
 ]
 
 
 def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> str:
-    from jarvis import actions, system_monitor
+    from jarvis import actions, system_monitor, security, memory, automation
     if name == "get_system_status":
         d = system_monitor.snapshot()
         return json.dumps({k: d[k] for k in (
@@ -203,6 +214,35 @@ def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> st
         return actions.schedule_power_action(action)
     if name == "cancel_power_action":
         return actions.cancel_power_action()
+    if name == "get_firewall_status":
+        return security.firewall_status()
+    if name == "inspect_network_connections":
+        return security.network_connections()
+    if name == "inspect_suspicious_processes":
+        return security.inspect_processes()
+    if name == "scan_file_with_defender":
+        path = str(args["path"])[:1000]
+        if confirm and not confirm(f"Ask Microsoft Defender to scan this file?\\n{path}"):
+            return "File scan cancelled."
+        return security.scan_file(path)
+    if name == "create_restore_point":
+        if confirm and not confirm("Create a Windows restore point? This may take a minute and requires administrator mode."):
+            return "Restore point creation cancelled."
+        return security.create_restore_point()
+    if name == "remember_preference":
+        return memory.set_preference(str(args["key"]), str(args["value"]))
+    if name == "remember_note":
+        return memory.remember(str(args["note"]))
+    if name == "read_memory":
+        return memory.summary()
+    if name == "clear_memory":
+        if confirm and not confirm("Permanently clear JARVIS's locally saved notes and preferences?"):
+            return "Memory clear cancelled."
+        return memory.clear()
+    if name == "save_automation_routine":
+        return automation.add_routine(str(args["name"]), str(args["instruction"]))
+    if name == "list_automation_routines":
+        return automation.report()
     return "Tool not available."
 
 
@@ -213,7 +253,7 @@ If you disagree with a plan, explain the risks and recommend a better one. You m
 ask pointed but respectful questions. Never argue just to win: when the user provides better evidence,
 update your view, acknowledge the error plainly and move on. Separate facts, estimates and uncertainty.
 Use concise natural language, with occasional dry wit, not canned robotic phrases. Address the user as 'sir'
-only occasionally, not in every reply. Understand requests in context and use available PC tools when helpful.
+only occasionally, not in every reply. Understand requests in context and use available PC tools when helpful. Use local memory only when the user asks you to remember something or when a preference is clearly durable; explain that memory is stored on this PC. For automation, save routines disabled and never imply they run in the background unless a scheduler has actually been configured. For security, treat process/network indicators as leads, not proof of malware. Create a restore point before major system changes when available.
 Never claim an action succeeded unless a tool returned success. The tools are a strict allow-list: do not
 invent tools, execute shell commands, run arbitrary code, exfiltrate secrets, delete files, or disable
 Defender/firewall/security. Explain consequential changes and require confirmation through the app.
