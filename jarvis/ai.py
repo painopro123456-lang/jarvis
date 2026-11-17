@@ -277,7 +277,7 @@ def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> st
         return security.inspect_processes()
     if name == "scan_file_with_defender":
         path = str(args["path"])[:1000]
-        if not confirm or not confirm(f"Ask Microsoft Defender to scan this file?\\n{path}"):
+        if not confirm or not confirm(f"Ask Microsoft Defender to scan this file?\n{path}"):
             return "File scan cancelled."
         return security.scan_file(path)
     if name == "create_restore_point":
