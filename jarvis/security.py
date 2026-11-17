@@ -55,3 +55,68 @@ def create_restore_point() -> str:
     r=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive","-Command",cmd],capture_output=True,text=True,timeout=90)
     if r.returncode: raise RuntimeError(r.stderr.strip() or "Windows could not create a restore point.")
     return "Windows restore point created."
+
+
+def defender_health_report() -> str:
+    """Read Defender's key protection controls and signature freshness."""
+    if platform.system() != "Windows":
+        return "Microsoft Defender health inspection is only available on Windows."
+    script = (
+        "Get-MpComputerStatus | Select-Object AMServiceEnabled,AntivirusEnabled,"
+        "AntispywareEnabled,RealTimeProtectionEnabled,BehaviorMonitorEnabled,"
+        "IoavProtectionEnabled,NISEnabled,IsTamperProtected,"
+        "AntivirusSignatureLastUpdated,AntivirusSignatureVersion,"
+        "QuickScanAge,FullScanAge | Format-List | Out-String"
+    )
+    result = subprocess.run(
+        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+        capture_output=True, text=True, timeout=30, shell=False
+    )
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or "Could not read Defender protection status.")
+    return result.stdout.strip() or "Windows returned no Defender health information."
+
+
+def threat_history() -> str:
+    """Read recent Defender detections; this does not alter quarantine or protection."""
+    if platform.system() != "Windows":
+        return "Microsoft Defender threat history is only available on Windows."
+    script = (
+        "Get-MpThreatDetection | Sort-Object InitialDetectionTime -Descending | "
+        "Select-Object -First 20 InitialDetectionTime,ThreatID,ActionSuccess,"
+        "Resources,ProcessName | Format-List | Out-String"
+    )
+    result = subprocess.run(
+        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+        capture_output=True, text=True, timeout=30, shell=False
+    )
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or "Could not read Defender threat history.")
+    return result.stdout.strip() or "No Defender detections were returned. This is not proof that the PC is clean."
+
+
+def inspect_file_trust(path_text: str) -> str:
+    """Read a file's SHA-256 and Authenticode signature; never execute or upload it."""
+    path = Path(os.path.expandvars(os.path.expanduser(path_text.strip().strip('"')))).resolve()
+    if not path.is_file():
+        raise ValueError("Choose an existing file.")
+    digest = __import__("hashlib").sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    if platform.system() != "Windows":
+        return f"File: {path.name}\\nSHA-256: {digest.hexdigest()}\\nAuthenticode signature inspection requires Windows."
+    escaped = str(path).replace("'", "''")
+    script = (
+        f"$s=Get-AuthenticodeSignature -LiteralPath '{escaped}'; "
+        "$s | Select-Object Status,StatusMessage,@{Name='Signer';Expression={$_.SignerCertificate.Subject}},"
+        "@{Name='Issuer';Expression={$_.SignerCertificate.Issuer}},"
+        "@{Name='ValidUntil';Expression={$_.SignerCertificate.NotAfter}} | Format-List | Out-String"
+    )
+    result = subprocess.run(
+        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+        capture_output=True, text=True, timeout=30, shell=False
+    )
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or "Could not inspect the file signature.")
+    return f"File: {path.name}\\nSHA-256: {digest.hexdigest()}\\n{result.stdout.strip()}\\nA valid signature identifies a signer; it does not guarantee that a file is harmless."
