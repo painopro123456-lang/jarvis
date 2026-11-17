@@ -195,7 +195,28 @@ TOOLS = [
 
 
 def _execute(name: str, args: dict, confirm: Callable[[str], bool] | None) -> str:
-    from jarvis import actions, system_monitor, security, memory, automation, diagnostics, file_tools, activity, download_guard
+    # Import each service only when its tool is used, keeping simple chat lightweight.
+    from importlib import import_module
+
+    class _LazyModule:
+        __slots__ = ("_name", "_module")
+        def __init__(self, module_name: str):
+            self._name = module_name
+            self._module = None
+        def __getattr__(self, attribute: str):
+            if self._module is None:
+                self._module = import_module("jarvis." + self._name)
+            return getattr(self._module, attribute)
+
+    actions = _LazyModule("actions")
+    system_monitor = _LazyModule("system_monitor")
+    security = _LazyModule("security")
+    memory = _LazyModule("memory")
+    automation = _LazyModule("automation")
+    diagnostics = _LazyModule("diagnostics")
+    file_tools = _LazyModule("file_tools")
+    activity = _LazyModule("activity")
+    download_guard = _LazyModule("download_guard")
     if name == "get_system_status":
         d = system_monitor.snapshot()
         return json.dumps({k: d[k] for k in (
