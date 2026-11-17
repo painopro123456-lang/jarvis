@@ -268,7 +268,7 @@ def search_software(query: str) -> str:
     search = " ".join(str(query).strip().split())
     if not search or len(search) > 100:
         raise ValueError("Enter a search phrase between 1 and 100 characters.")
-    if any(ch in search for ch in ("\\r", "\\n", "\\0")):
+    if any(ch in search for ch in ("\r", "\n", "\0")):
         raise ValueError("That search phrase contains invalid characters.")
     if platform.system() != "Windows":
         raise RuntimeError("Software discovery is available only on Windows.")
@@ -294,7 +294,7 @@ def manage_software(name: str, upgrade: bool = False) -> str:
     app_name = " ".join(str(name).strip().split())
     if not app_name or len(app_name) > 120:
         raise ValueError("Enter a software name between 1 and 120 characters.")
-    if any(ch in app_name for ch in ("\\r", "\\n", "\\0")):
+    if any(ch in app_name for ch in ("\r", "\n", "\0")):
         raise ValueError("That software name contains invalid characters.")
     if platform.system() != "Windows":
         raise RuntimeError("Software management is available only on Windows.")
