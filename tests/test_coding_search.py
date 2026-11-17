@@ -68,6 +68,12 @@ class ProjectSearchTests(unittest.TestCase):
         result = coding.audit_python_project("demo")
         self.assertNotIn("recognized safe Loader", result)
 
+    def test_static_audit_reports_skipped_large_files(self):
+        (self.project / "large.py").write_text(" " * (coding.MAX_READ_BYTES + 1), encoding="utf-8")
+        result = coding.audit_python_project("demo")
+        self.assertIn("Skipped 1 files larger", result)
+        self.assertIn("not proof", result)
+
     def test_static_audit_reports_syntax_errors(self):
         (self.project / "broken.py").write_text("def broken(:\n", encoding="utf-8")
         result = coding.audit_python_project("demo")
