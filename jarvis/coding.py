@@ -92,10 +92,13 @@ def inspect_project(project: str = ".") -> str:
         matches = list(base.glob(manifest)) if "*" in manifest else ([base / manifest] if (base / manifest).is_file() else [])
         for path in matches[:2]:
             try:
-                snippet = path.read_text(encoding="utf-8", errors="replace")[:5000]
-                rows.append(f"\n--- {path.name} ---\n{snippet}")
-            except OSError:
-                pass
+                safe_path = _file_path(project, path.name)
+                if not safe_path.is_file() or safe_path.is_symlink():
+                    continue
+                snippet = safe_path.read_text(encoding="utf-8", errors="replace")[:5000]
+                rows.append(f"\n--- {safe_path.name} ---\n{snippet}")
+            except (OSError, ValueError):
+                continue
     return "\n".join(rows)[:22000]
 
 def read_file(project: str, relative_path: str) -> str:
@@ -329,6 +332,14 @@ def run_check(project: str, check: str) -> str:
     if check not in COMMANDS:
         raise ValueError("Unsupported project check.")
     command, label = COMMANDS[check]
+    uses_unittest_fallback = False
+    if check == "python_tests":
+        # Pytest is not a JARVIS runtime dependency. Use it when installed,
+        # otherwise fall back to Python's built-in unittest discovery.
+        from importlib.util import find_spec
+        if find_spec("pytest") is None:
+            command = [sys.executable, "-m", "unittest", "discover", "-v"]
+            uses_unittest_fallback = True
     try:
         result = subprocess.run(command, cwd=base, capture_output=True, text=True,
                                 timeout=900, shell=False)
@@ -337,7 +348,10 @@ def run_check(project: str, check: str) -> str:
     except subprocess.TimeoutExpired:
         raise RuntimeError(f"{label} exceeded the 15-minute time limit.")
     output = (result.stdout or "") + ("\n" + result.stderr if result.stderr else "")
-    status = "PASSED" if result.returncode == 0 else f"FAILED (exit {result.returncode})"
+    if uses_unittest_fallback and result.returncode == 0 and "Ran 0 tests" in output:
+        status = "NO TESTS FOUND (unittest fallback)"
+    else:
+        status = "PASSED" if result.returncode == 0 else f"FAILED (exit {result.returncode})"
     return f"{label}: {status}\n{output[-12000:]}".strip()
 
 def create_project(name: str) -> str:
