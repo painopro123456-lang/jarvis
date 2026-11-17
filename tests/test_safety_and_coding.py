@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from jarvis import assistant, coding, download_guard, security
+from jarvis import actions, assistant, coding, download_guard, security
 
 
 class CodingWorkspaceTests(unittest.TestCase):
@@ -80,6 +80,36 @@ class CodingWorkspaceTests(unittest.TestCase):
         self.assertIn("-print('old')", preview)
         self.assertIn("+print('new')", preview)
         self.assertEqual(source.read_text(encoding="utf-8"), "print('old')\n")
+
+
+class ProcessAndLaunchSafetyTests(unittest.TestCase):
+    def test_direct_executable_launch_requires_approval(self):
+        with tempfile.TemporaryDirectory() as folder:
+            executable = Path(folder) / "unknown.exe"
+            executable.write_bytes(b"not executed")
+            with patch("jarvis.actions.os.startfile") as startfile:
+                result = actions.open_target(str(executable), confirm=lambda prompt: False)
+            self.assertIn("cancelled", result.lower())
+            startfile.assert_not_called()
+
+    def test_direct_executable_launch_runs_only_after_approval(self):
+        with tempfile.TemporaryDirectory() as folder:
+            executable = Path(folder) / "trusted.exe"
+            executable.write_bytes(b"placeholder")
+            with patch("jarvis.actions.os.startfile") as startfile:
+                result = actions.open_target(str(executable), confirm=lambda prompt: True)
+            self.assertIn("Opening", result)
+            startfile.assert_called_once()
+
+    def test_critical_windows_process_cannot_be_terminated(self):
+        class FakeProcess:
+            def name(self):
+                return "lsass.exe"
+            def terminate(self):
+                raise AssertionError("Critical process must not be terminated")
+        with patch("jarvis.actions.psutil.Process", return_value=FakeProcess()):
+            with self.assertRaises(ValueError):
+                actions.terminate_process("4321")
 
 
 class ConfirmationSafetyTests(unittest.TestCase):
