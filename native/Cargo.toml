@@ -1,0 +1,12 @@
+[package]
+name = "jarvis-core"
+version = "0.1.0"
+edition = "2021"
+description = "Native Windows system and driver intelligence core for JARVIS"
+
+[[bin]]
+name = "jarvis-core"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = "1"
