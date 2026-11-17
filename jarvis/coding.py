@@ -164,7 +164,7 @@ def preview_file_change(project: str, relative_path: str, content: str) -> str:
     ))
     if not diff:
         return f"No changes proposed for {relative_path}."
-    return f"Proposed change for {relative_path} (preview only; nothing written):\\n{diff[:18000]}"
+    return f"Proposed change for {relative_path} (preview only; nothing written):\n{diff[:18000]}"
 
 COMMANDS = {
     "python_tests": ([sys.executable, "-m", "pytest", "-q"], "Run Python test suite"),
