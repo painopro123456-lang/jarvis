@@ -10,7 +10,8 @@ JARVIS uses [Ollama](https://ollama.com) to run its language model locally. Ther
 
 ### Intelligence
 - Independent-minded assistant personality: can challenge assumptions, explain reasoning, admit mistakes and revise its view when given better evidence.
-- Multi-step planning and allow-listed local PC tool calling.
+- Multi-step tool use with step-by-step result inspection, bounded retries and explicit success/failure reporting.
+- A local action history view in the Security Center; only minimal action metadata is recorded.
 - Private local memory for notes and preferences, with view and clear controls.
 - Proactive system recommendations and a one-click daily PC briefing.
 
@@ -44,6 +45,10 @@ JARVIS uses [Ollama](https://ollama.com) to run its language model locally. Ther
 ### Automation
 - Save named routines for later review. New routines are disabled by default.
 - No silent background task execution or unrestricted shell access. Windows Task Scheduler can be opened by the user for advanced scheduling.
+
+## Development roadmap
+
+The current repository is a staged build, not yet a finished unrestricted PC agent. Implemented foundations include local conversational AI, allow-listed PC tools, local screen analysis (optional model), read-only security inspection, driver inventory/Windows Update discovery, description-based software catalogue search, explicit confirmation for consequential AI tool actions, and a privacy-minimal local action history. Remaining planned work includes a permissioned browser companion/extension for real page interaction, deeper hardware/vendor driver comparison, a verified optimization planner with before/after measurements, more robust rollback for supported settings, richer speech turn-taking, and an end-to-end integration test suite. The Rust core is currently a small sidecar; the GUI and most orchestration remain Python/PySide6.
 
 ## Safety boundaries
 JARVIS starts without administrator privileges. Risky actions require a confirmation dialog. No software can guarantee that an AI will never make a mistake; JARVIS is being designed around narrow permissions, previews, explicit approvals, verification and recovery rather than blind trust. Its AI can call only explicitly allow-listed functions; model output is never passed directly to arbitrary CMD or PowerShell. User files are not silently deleted. JARVIS is a companion to Windows Security, not a replacement for antivirus software.
