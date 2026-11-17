@@ -1,12 +1,17 @@
-"""Intent router for JARVIS. Unknown text is never executed as a shell command."""
+"""Natural-language AI router with a safe offline/basic-command fallback."""
 from __future__ import annotations
 
 from pathlib import Path
 
-from jarvis import actions, system_monitor
+from jarvis import actions, system_monitor, ai
 
 
 def respond(message: str, confirm=None) -> str:
+    # When configured, the AI brain handles both conversation and multi-step
+    # tool selection. Without a key, retain the original local command router.
+    if ai.has_api_key():
+        return ai.respond(message, confirm=confirm)
+
     text = message.strip()
     lower = text.lower()
     if not text:
@@ -69,11 +74,11 @@ def respond(message: str, confirm=None) -> str:
                                 break
                 except (PermissionError, OSError):
                     pass
-        return "Found files:\n" + "\n".join(matches) if matches else "No matching files found in Desktop, Documents, or Downloads."
+        return "Found files:\\n" + "\\n".join(matches) if matches else "No matching files found in Desktop, Documents, or Downloads."
     if lower in {"help", "what can you do", "commands"}:
-        return ("Try: PC status; open Notepad; open C:\\path\\to\\file; list processes; "
+        return ("Try: PC status; open Notepad; open C:\\\\path\\\\to\\\\file; list processes; "
                 "show startup apps; Defender status; start Defender scan; high performance; "
                 "close process 1234; restart PC; lock PC; find file report.pdf. "
-                "Risky actions ask before proceeding.")
-    return ("I don't have a mapped action for that request yet. I will not interpret arbitrary text "
-            "as terminal commands. Type 'help' to see supported PC controls.")
+                "Add an OpenAI API key with AI SETUP to enable natural conversation and tool planning.")
+    return ("AI brain is not connected yet. Click AI SETUP to add an OpenAI API key; "
+            "then you can describe tasks naturally. Basic commands still work without it.")
