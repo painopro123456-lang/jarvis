@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from jarvis import coding, download_guard
+from jarvis import assistant, coding, download_guard
 
 
 class CodingWorkspaceTests(unittest.TestCase):
@@ -59,6 +59,15 @@ class CodingWorkspaceTests(unittest.TestCase):
         self.assertIn("-print('old')", preview)
         self.assertIn("+print('new')", preview)
         self.assertEqual(source.read_text(encoding="utf-8"), "print('old')\\n")
+
+
+class ConfirmationSafetyTests(unittest.TestCase):
+    def test_offline_router_fails_closed_without_confirmation_callback(self):
+        with patch("jarvis.assistant.ai.is_ready", return_value=False), \
+             patch("jarvis.assistant.actions.schedule_power_action") as schedule:
+            result = assistant.respond("restart my PC", confirm=None)
+        self.assertIn("cancelled", result.lower())
+        schedule.assert_not_called()
 
 
 class DownloadMonitorTests(unittest.TestCase):
