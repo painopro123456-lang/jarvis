@@ -126,3 +126,14 @@ def run_check(project: str, check: str) -> str:
     output = (result.stdout or "") + ("\n" + result.stderr if result.stderr else "")
     status = "PASSED" if result.returncode == 0 else f"FAILED (exit {result.returncode})"
     return f"{label}: {status}\n{output[-12000:]}".strip()
+
+def create_project(name: str) -> str:
+    clean = " ".join(str(name).strip().split())
+    if not clean or len(clean) > 80 or clean in {".", ".."} or any(ch in clean for ch in '<>:"/\\\\|?*'):
+        raise ValueError("Choose a simple project name (letters, numbers, spaces, dots, dashes or underscores).")
+    root = workspace_root()
+    target = (root / clean).resolve()
+    if root not in target.parents:
+        raise ValueError("Invalid project folder.")
+    target.mkdir(parents=True, exist_ok=False)
+    return f"Created project folder: {target}"
