@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from jarvis import actions, assistant, coding, download_guard, security
+from jarvis.voice import Voice
 
 
 class CodingWorkspaceTests(unittest.TestCase):
@@ -80,6 +81,14 @@ class CodingWorkspaceTests(unittest.TestCase):
         self.assertIn("-print('old')", preview)
         self.assertIn("+print('new')", preview)
         self.assertEqual(source.read_text(encoding="utf-8"), "print('old')\n")
+
+
+class VoiceLifecycleTests(unittest.TestCase):
+    def test_wake_word_listener_is_not_started_twice(self):
+        voice = Voice()
+        voice._wake_stop = lambda **kwargs: None
+        result = voice.start_wake_word(lambda phrase: None)
+        self.assertIn("already enabled", result.lower())
 
 
 class ProcessAndLaunchSafetyTests(unittest.TestCase):
