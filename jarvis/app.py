@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import sys
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QMessageBox, QPushButton, QProgressBar, QTextEdit,
-    QVBoxLayout, QWidget
+    QMainWindow, QMessageBox, QPushButton, QProgressBar, QTextEdit, QVBoxLayout, QWidget
 )
 from jarvis.assistant import respond
 from jarvis.system_monitor import snapshot
 from jarvis.voice import Voice
+from jarvis import actions
 
 
 class Metric(QFrame):
@@ -92,17 +92,21 @@ class MainWindow(QMainWindow):
 
         controls = QHBoxLayout()
         self.entry = QLineEdit()
-        self.entry.setPlaceholderText("Ask JARVIS…  e.g. 'PC status' or 'open Calculator'")
+        self.entry.setPlaceholderText("Ask JARVIS… e.g. 'PC status', 'list processes', 'open Calculator'")
         self.entry.returnPressed.connect(self.send)
         send = QPushButton("SEND")
         send.clicked.connect(self.send)
         mic = QPushButton("🎙  TALK")
         mic.clicked.connect(self.listen)
+        self.admin = QPushButton("ADMIN MODE")
+        self.admin.clicked.connect(self.enable_admin)
         controls.addWidget(self.entry, 1)
         controls.addWidget(mic)
+        controls.addWidget(self.admin)
         controls.addWidget(send)
         outer.addLayout(controls)
-        foot = QLabel("LOCAL DASHBOARD  •  EXPLICIT ACTIONS  •  MICROSOFT DEFENDER INTEGRATION")
+
+        foot = QLabel("LOCAL PC CONTROL  •  UAC ELEVATION  •  CONFIRMATIONS FOR RISKY ACTIONS")
         foot.setObjectName("muted")
         outer.addWidget(foot)
 
@@ -125,6 +129,28 @@ class MainWindow(QMainWindow):
         self.timer.timeout.connect(self.refresh)
         self.timer.start(2500)
         self.refresh()
+        self.update_admin_status()
+
+    def confirm(self, prompt: str) -> bool:
+        return QMessageBox.question(self, "JARVIS confirmation", prompt,
+                                    QMessageBox.Yes | QMessageBox.No,
+                                    QMessageBox.No) == QMessageBox.Yes
+
+    def enable_admin(self):
+        if actions.is_admin():
+            QMessageBox.information(self, "Administrator mode", "JARVIS already has administrator permissions.")
+            return
+        if not self.confirm("Windows will display a User Account Control prompt. Continue?"):
+            return
+        try:
+            message = actions.relaunch_as_admin()
+            self.chat.append("JARVIS  /  " + message)
+            QApplication.quit()
+        except Exception as exc:
+            QMessageBox.warning(self, "Administrator mode", str(exc))
+
+    def update_admin_status(self):
+        self.admin.setText("ADMIN ACTIVE" if actions.is_admin() else "ADMIN MODE")
 
     def refresh(self):
         try:
@@ -145,6 +171,7 @@ class MainWindow(QMainWindow):
             self.processes.setText("\n".join(
                 f"{p['name']}  ·  {p['memory_mb']:.0f} MB" for p in data["processes"]
             ) or "No process data")
+            self.update_admin_status()
         except Exception as exc:
             self.online.setText("● MONITOR LIMITED")
             self.host.setText(str(exc))
@@ -156,7 +183,7 @@ class MainWindow(QMainWindow):
         self.entry.clear()
         self.chat.append(f"YOU  /  {message}")
         try:
-            answer = respond(message)
+            answer = respond(message, confirm=self.confirm)
         except Exception as exc:
             answer = f"I couldn't complete that action: {exc}"
         self.chat.append(f"JARVIS  /  {answer}\n")
